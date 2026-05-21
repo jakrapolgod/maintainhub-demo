@@ -12,6 +12,13 @@ import type { CommandContext } from './command.types.js'
 
 // ── Result ────────────────────────────────────────────────────────────────────
 
+interface DeliveryResult {
+  success: boolean
+  responseCode: number | undefined
+  responseBody: string
+  durationMs: number
+}
+
 export interface TestWebhookResult {
   success: boolean
   responseCode: number | undefined

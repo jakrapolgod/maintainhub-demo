@@ -14,7 +14,7 @@
  * catch all advance-notice scenarios while keeping the result set small.
  */
 import type { PrismaClient } from '@prisma/client'
-import type { PMSchedule, PMScheduleRepository, type PMScheduleId } from '@maintainhub/domain'
+import type { PMSchedule, PMScheduleRepository, PMScheduleId } from '@maintainhub/domain'
 import { PMScheduleMapper } from './PMScheduleMapper.js'
 
 /** Upper bound for the SQL pre-filter.  The domain shouldTrigger() does the exact check. */

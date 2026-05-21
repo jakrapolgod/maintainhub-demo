@@ -121,7 +121,7 @@ export class WebhookDeliveryService {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  private static sign(secret: string, body: string): string {
+  static sign(secret: string, body: string): string {
     const hmac = createHmac('sha256', secret)
     hmac.update(body, 'utf8')
     return `sha256=${hmac.digest('hex')}`
