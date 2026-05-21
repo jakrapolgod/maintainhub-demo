@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel any in-progress run for the same branch / PR so stale commits don't
+# waste runner minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+  # Uncomment and add secrets to enable Turborepo Remote Cache (faster CI):
+  # TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  # TURBO_TEAM:  ${{ secrets.TURBO_TEAM }}
+
+jobs:
+  ci:
+    name: Lint → Typecheck → Test → Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read # minimum required; expand if you add PR comment steps
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history lets Turborepo compute affected packages via git diff
+          # against the last successful run on this branch.
+          fetch-depth: 0
+
+      # ── Toolchain ────────────────────────────────────────────────────────
+      # pnpm version is read from the `packageManager` field in package.json.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      # actions/setup-node with cache:'pnpm' caches the pnpm content-addressable
+      # store (~/.local/share/pnpm/store) keyed by pnpm-lock.yaml hash.
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ── Caches ───────────────────────────────────────────────────────────
+      # Turborepo local task cache.  Keyed by lockfile hash (bust on any dep
+      # change) + commit SHA (unique per push).  Restore-key falls back to the
+      # most recent entry with the same lockfile so unchanged tasks are skipped.
+      - name: Cache Turborepo artifacts
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-turbo-
+
+      # ── Install ───────────────────────────────────────────────────────────
+      # --frozen-lockfile: fail immediately if pnpm-lock.yaml is out of sync
+      # with package.json — prevents stale lockfile PRs from slipping through.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Prisma client ─────────────────────────────────────────────────────
+      # Generates typed @prisma/client from schema.prisma.
+      # Must run before any step that compiles TypeScript importing @prisma/client
+      # because the generated types live inside node_modules.
+      # Does NOT require a live database — only reads the schema file.
+      - name: Generate Prisma client
+        run: pnpm --filter @maintainhub/api db:generate
+
+      # ── Quality gates (sequential — each step blocks the next) ───────────
+
+      - name: Lint
+        run: pnpm turbo run lint
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck
+
+      - name: Test
+        run: pnpm turbo run test
+
+      - name: Build
+        run: pnpm turbo run build
+        # When auth / DB routes land (Sprint 3+), add required build-time
+        # environment variables here as GitHub Actions secrets:
+        # env:
+        #   DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}

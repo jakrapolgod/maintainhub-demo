@@ -1,0 +1,52 @@
+{
+  "name": "maintainhub",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yaml,yml}\" --ignore-path .prettierignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yaml,yml}\" --ignore-path .prettierignore",
+    "clean": "turbo run clean",
+    "prepare": "husky",
+    "dev:infra": "docker compose up -d",
+    "dev:infra:logs": "docker compose logs -f",
+    "dev:stop": "docker compose down",
+    "dev:infra:reset": "docker compose down -v --remove-orphans",
+    "db:generate": "pnpm --filter @maintainhub/api db:generate",
+    "db:migrate": "pnpm --filter @maintainhub/api db:migrate",
+    "db:migrate:prod": "pnpm --filter @maintainhub/api db:migrate:prod",
+    "db:seed": "pnpm --filter @maintainhub/api db:seed",
+    "db:studio": "pnpm --filter @maintainhub/api db:studio",
+    "db:reset": "pnpm --filter @maintainhub/api db:reset"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-typescript": "^18.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.6.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.0"
+  }
+}

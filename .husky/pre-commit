@@ -1,0 +1,6 @@
+# On the very first commit there is no HEAD — skip lint-staged to avoid
+# OOM from linting all 450+ files in parallel. Subsequent commits use the
+# normal incremental lint-staged flow (only changed files are checked).
+if git rev-parse HEAD >/dev/null 2>&1; then
+  NODE_OPTIONS="--max-old-space-size=4096" pnpm lint-staged
+fi

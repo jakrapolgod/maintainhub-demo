@@ -1,0 +1,7 @@
+export { AssetId } from './asset-id.js'
+export { AssetNumber } from './asset-number.js'
+export { AssetCategory } from './asset-category.js'
+export { AssetStatus } from './asset-status.js'
+export { CriticalityLevel } from './criticality-level.js'
+export type { AssetStatusValue } from './asset-status.js'
+export type { CriticalityValue } from './criticality-level.js'

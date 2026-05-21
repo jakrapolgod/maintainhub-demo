@@ -1,0 +1,148 @@
+services:
+  # ── PostgreSQL 16 ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: maintainhub-postgres
+    restart: unless-stopped
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-maintainhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-maintainhub_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-maintainhub_dev}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-maintainhub} -d ${POSTGRES_DB:-maintainhub_dev}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - maintainhub-net
+
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: maintainhub-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    # Persist data: snapshot every 60s if ≥1 key changed; AOF for durability
+    command: >
+      redis-server
+      --save 60 1
+      --appendonly yes
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - maintainhub-net
+
+  # ── MinIO (S3-compatible object storage) ─────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: maintainhub-minio
+    restart: unless-stopped
+    ports:
+      - '${MINIO_API_PORT:-9000}:9000' # S3 API
+      - '${MINIO_CONSOLE_PORT:-9001}:9001' # Web console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_dev_secret}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - maintainhub-net
+
+  # Creates the default bucket once MinIO is healthy; exits cleanly afterwards
+  minio-init:
+    image: minio/mc:latest
+    container_name: maintainhub-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
+        mc mb --ignore-existing local/$$MINIO_BUCKET_NAME &&
+        mc anonymous set download local/$$MINIO_BUCKET_NAME/public &&
+        echo '[minio-init] bucket ready: '$$MINIO_BUCKET_NAME
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_dev_secret}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-maintainhub}
+    networks:
+      - maintainhub-net
+
+  # ── Meilisearch ───────────────────────────────────────────────────────────────
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: maintainhub-meilisearch
+    restart: unless-stopped
+    ports:
+      - '${MEILI_PORT:-7700}:7700'
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-maintainhub_meili_dev_master_key_32chars}
+      MEILI_ENV: ${MEILI_ENV:-development}
+      MEILI_DB_PATH: /meili_data
+      MEILI_LOG_LEVEL: ${MEILI_LOG_LEVEL:-WARN}
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - maintainhub-net
+
+  # ── Mailpit (SMTP catch-all for local development) ───────────────────────────
+  # All emails sent in dev are captured here — none reach real recipients.
+  # SMTP: localhost:1025   Web UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: maintainhub-mailpit
+    restart: unless-stopped
+    ports:
+      - '${MAILPIT_SMTP_PORT:-1025}:1025' # SMTP ingress
+      - '${MAILPIT_UI_PORT:-8025}:8025' # Web UI for inspecting emails
+    networks:
+      - maintainhub-net
+
+# ── Named volumes (data survives container restarts) ─────────────────────────
+volumes:
+  postgres_data:
+    name: maintainhub-postgres-data
+  redis_data:
+    name: maintainhub-redis-data
+  minio_data:
+    name: maintainhub-minio-data
+  meilisearch_data:
+    name: maintainhub-meilisearch-data
+
+# ── Internal bridge network ───────────────────────────────────────────────────
+networks:
+  maintainhub-net:
+    name: maintainhub-net
+    driver: bridge
