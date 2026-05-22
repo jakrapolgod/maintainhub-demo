@@ -5,6 +5,7 @@ export type CriticalityClass = "A" | "B" | "C";
 export type WOStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED";
 export type WOPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type PMFrequency = "MONTHLY" | "QUARTERLY";
+export type PMType = "CALENDAR" | "METER" | "CONDITION";
 export type UserRole = "ADMIN" | "MANAGER" | "TECHNICIAN";
 
 export interface Asset {
@@ -35,11 +36,17 @@ export interface PMSchedule {
   id: string;
   title: string;
   assetId: string;
+  type: PMType;
   frequency: PMFrequency;
   lastDone: string;
   nextDue: string;
   isOverdue: boolean;
+  isActive: boolean;
+  taskCount: number;
   assignedTo: string;
+  plannedTriggers: number;
+  actualTriggers: number;
+  compliancePct: number;
 }
 
 export interface User {
@@ -73,10 +80,13 @@ export const workOrders: WorkOrder[] = [
 
 // ── PM Schedules ──────────────────────────────────────────────────────────────
 export const pmSchedules: PMSchedule[] = [
-  { id: "pm1", title: "Monthly pump inspection",       assetId: "a1", frequency: "MONTHLY",   lastDone: "2026-04-10", nextDue: "2026-05-10", isOverdue: true,  assignedTo: "u3" },
-  { id: "pm2", title: "Quarterly compressor overhaul", assetId: "a2", frequency: "QUARTERLY", lastDone: "2026-02-01", nextDue: "2026-05-01", isOverdue: true,  assignedTo: "u3" },
-  { id: "pm3", title: "Monthly conveyor belt check",   assetId: "a3", frequency: "MONTHLY",   lastDone: "2026-04-28", nextDue: "2026-05-28", isOverdue: false, assignedTo: "u3" },
-  { id: "pm4", title: "Quarterly generator service",   assetId: "a5", frequency: "QUARTERLY", lastDone: "2026-04-28", nextDue: "2026-07-28", isOverdue: false, assignedTo: "u2" },
+  { id: "pm1", title: "Monthly pump inspection",       assetId: "a1", type: "CALENDAR",  frequency: "MONTHLY",   lastDone: "2026-04-10", nextDue: "2026-05-10", isOverdue: true,  isActive: true,  taskCount: 8,  assignedTo: "u3", plannedTriggers: 12, actualTriggers: 10, compliancePct: 83 },
+  { id: "pm2", title: "Quarterly compressor overhaul", assetId: "a2", type: "CALENDAR",  frequency: "QUARTERLY", lastDone: "2026-02-01", nextDue: "2026-05-01", isOverdue: true,  isActive: true,  taskCount: 14, assignedTo: "u3", plannedTriggers: 4,  actualTriggers: 3,  compliancePct: 75 },
+  { id: "pm3", title: "Monthly conveyor belt check",   assetId: "a3", type: "METER",     frequency: "MONTHLY",   lastDone: "2026-04-28", nextDue: "2026-05-28", isOverdue: false, isActive: true,  taskCount: 6,  assignedTo: "u3", plannedTriggers: 12, actualTriggers: 12, compliancePct: 100 },
+  { id: "pm4", title: "Quarterly generator service",   assetId: "a5", type: "CALENDAR",  frequency: "QUARTERLY", lastDone: "2026-04-28", nextDue: "2026-07-28", isOverdue: false, isActive: true,  taskCount: 11, assignedTo: "u2", plannedTriggers: 4,  actualTriggers: 4,  compliancePct: 100 },
+  { id: "pm5", title: "Cooling tower inspection",      assetId: "a4", type: "CONDITION", frequency: "MONTHLY",   lastDone: "2026-04-15", nextDue: "2026-05-15", isOverdue: true,  isActive: true,  taskCount: 5,  assignedTo: "u2", plannedTriggers: 12, actualTriggers: 9,  compliancePct: 75 },
+  { id: "pm6", title: "Generator fuel check",          assetId: "a5", type: "METER",     frequency: "MONTHLY",   lastDone: "2026-05-01", nextDue: "2026-05-25", isOverdue: false, isActive: false, taskCount: 3,  assignedTo: "u3", plannedTriggers: 12, actualTriggers: 7,  compliancePct: 58 },
+  { id: "pm7", title: "Conveyor drive alignment",      assetId: "a3", type: "CALENDAR",  frequency: "QUARTERLY", lastDone: "2026-02-20", nextDue: "2026-05-20", isOverdue: true,  isActive: true,  taskCount: 7,  assignedTo: "u3", plannedTriggers: 4,  actualTriggers: 3,  compliancePct: 75 },
 ];
 
 // ── Users ─────────────────────────────────────────────────────────────────────
