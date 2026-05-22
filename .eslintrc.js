@@ -10,7 +10,9 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module',
     project: [
+      './tsconfig.json',
       './apps/api/tsconfig.json',
+      './apps/web/tsconfig.json',
       './apps/worker/tsconfig.json',
       // tsconfig.eslint.json extends the production tsconfig but includes test files,
       // which the production tsconfig excludes to keep the build artefact clean.
@@ -27,7 +29,9 @@ module.exports = {
       typescript: {
         alwaysTryTypes: true,
         project: [
+          './tsconfig.json',
           './apps/api/tsconfig.json',
+          './apps/web/tsconfig.json',
           './apps/worker/tsconfig.json',
           './packages/domain/tsconfig.eslint.json',
           './packages/shared/tsconfig.json',

@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import {
   LineChart,
   Line,
@@ -13,6 +14,15 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const ASSETS = ['Pump A', 'HVAC-1', 'Conveyor', 'Chiller', 'Generator']
@@ -54,12 +64,46 @@ const reliability = [
 ].sort((a, b) => a.avail - b.avail)
 
 const tip = { contentStyle: { fontSize: 11 }, wrapperStyle: { zIndex: 50 } }
+
+type Period = 'week' | 'month' | 'quarter'
+
 export default function AnalyticsPage() {
+  const [open, setOpen] = useState(false)
+  const [period, setPeriod] = useState<Period>('month')
+  const [report, setReport] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function generateReport() {
+    setReport('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/ai/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period, data: {} }),
+      })
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        setReport((prev) => prev + decoder.decode(value))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <div className="border-b bg-background px-6 py-4 shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-        <p className="text-sm text-muted-foreground">12-month reliability & cost overview</p>
+      <div className="border-b bg-background px-6 py-4 shrink-0 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+          <p className="text-sm text-muted-foreground">12-month reliability & cost overview</p>
+        </div>
+        <Button size="sm" onClick={() => setOpen(true)}>
+          Generate AI Report
+        </Button>
       </div>
 
       <div className="p-6 space-y-8">
@@ -199,6 +243,47 @@ export default function AnalyticsPage() {
           </div>
         </section>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI Maintenance Report</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">Weekly</SelectItem>
+                  <SelectItem value="month">Monthly</SelectItem>
+                  <SelectItem value="quarter">Quarterly</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={generateReport} disabled={loading}>
+                {loading ? 'Generating…' : 'Generate'}
+              </Button>
+            </div>
+            {report && (
+              <>
+                <div className="rounded-md border bg-muted/30 p-4 max-h-80 overflow-y-auto text-sm space-y-0.5 font-mono">
+                  {report.split('\n').map((line, i) => (
+                    <p key={i}>{line || ' '}</p>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigator.clipboard.writeText(report)}
+                >
+                  Copy report
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
