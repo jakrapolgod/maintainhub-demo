@@ -2,7 +2,7 @@
 
 AI-powered enterprise CMMS (Computerized Maintenance Management System) for managing work orders, assets, and preventive maintenance programs.
 
-**Live URL:** https://maintainhub.vercel.app
+**Live URL:** https://maintainhub-demo.vercel.app/dashboard
 
 ---
 
