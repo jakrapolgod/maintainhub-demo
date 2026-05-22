@@ -1,10 +1,116 @@
 "use client"
 
+import { useState, useRef } from "react"
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { workOrders, getUserById } from "@/lib/mock-data"
+
+const MOCK_CONTEXT = JSON.stringify({
+  openWorkOrders: 12,
+  overdueSLA: 3,
+  pmCompliance: "87%",
+  mttr: "4.2 hrs",
+  assetsNeedingAttention: [
+    { name: "Cooling Tower CT-004", issue: "Overdue PM", daysSince: 112 },
+    { name: "Conveyor CB-003",      issue: "Overdue PM", daysSince: 97  },
+    { name: "Compressor AC-002",    issue: "In Maintenance", daysSince: 61 },
+  ],
+})
+
+function AiInsightCard() {
+  const [open, setOpen] = useState(false)
+  const [question, setQuestion] = useState("")
+  const [answer, setAnswer] = useState("")
+  const [loading, setLoading] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+
+  async function handleAsk() {
+    if (!question.trim() || loading) return
+    setAnswer("")
+    setLoading(true)
+    abortRef.current = new AbortController()
+
+    try {
+      const res = await fetch("/api/ai/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, context: MOCK_CONTEXT }),
+        signal: abortRef.current.signal,
+      })
+
+      if (!res.body) throw new Error("No response body")
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        setAnswer((prev) => prev + decoder.decode(value, { stream: true }))
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setAnswer("Something went wrong. Please try again.")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>AI Insight</CardTitle>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">Ask AI</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Ask about your facility</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                placeholder="e.g. Which assets are at highest risk this week?"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={3}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleAsk()
+                }}
+              />
+              <Button onClick={handleAsk} disabled={loading} className="w-full">
+                {loading ? "Thinking…" : "Send"}
+              </Button>
+              {answer && (
+                <div className="rounded-md bg-muted p-3 text-sm leading-relaxed whitespace-pre-wrap">
+                  {answer}
+                  {loading && <span className="ml-1 animate-pulse">▌</span>}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Your facility has <strong>3 SLA breaches</strong> and <strong>87% PM compliance</strong> this
+          week. Cooling Tower CT-004 is 112 days overdue — consider escalating before the next
+          quarterly audit.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
 
 const woStatusData = [
   { s: "Open", n: 3 }, { s: "In Progress", n: 2 }, { s: "Completed", n: 3 },
@@ -114,6 +220,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      {/* AI Insight */}
+      <AiInsightCard />
     </div>
   )
 }
