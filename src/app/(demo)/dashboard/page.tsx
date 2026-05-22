@@ -71,8 +71,8 @@ function AiInsightCard() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>AI Insight</CardTitle>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">Ask AI</Button>
+          <DialogTrigger render={<Button size="sm" />}>
+            Ask AI
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
