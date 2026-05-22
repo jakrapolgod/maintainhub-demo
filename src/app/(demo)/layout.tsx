@@ -29,6 +29,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { DemoBanner } from "@/components/DemoBanner"
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
@@ -150,7 +151,9 @@ export default function DemoLayout({
   const pageTitle = pathTitles[pathname] ?? "MaintainHub"
 
   return (
-    <div className="flex h-full min-h-dvh bg-background">
+    <div className="flex h-full min-h-dvh flex-col bg-background">
+      <DemoBanner />
+      <div className="flex flex-1 min-h-0">
       {/* ── Desktop sidebar (hidden on mobile) ── */}
       <aside className="hidden w-60 shrink-0 border-r lg:block">
         <SidebarNav pathname={pathname} />
@@ -193,6 +196,7 @@ export default function DemoLayout({
 
         {/* Page content */}
         <main className="flex-1 overflow-auto p-6">{children}</main>
+      </div>
       </div>
     </div>
   )
