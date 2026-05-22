@@ -28,13 +28,19 @@
     "db:migrate:prod": "pnpm --filter @maintainhub/api db:migrate:prod",
     "db:seed": "pnpm --filter @maintainhub/api db:seed",
     "db:studio": "pnpm --filter @maintainhub/api db:studio",
-    "db:reset": "pnpm --filter @maintainhub/api db:reset"
+    "db:reset": "pnpm --filter @maintainhub/api db:reset",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "date-fns": "^4.2.1",
     "eslint": "^8.57.0",
     "eslint-config-airbnb-typescript": "^18.0.0",
     "eslint-config-prettier": "^9.1.0",

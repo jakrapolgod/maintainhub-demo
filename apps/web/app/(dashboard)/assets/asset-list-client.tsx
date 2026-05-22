@@ -5,30 +5,41 @@
  *   Left: AssetTreePanel (collapsible, virtualized, drag-and-drop)
  *   Right: DataTable with toolbar (search, filters, export, import, new asset)
  */
-import { useState, useCallback } from 'react'
-import { useRouter }   from 'next/navigation'
-import Link            from 'next/link'
-import { format }      from 'date-fns'
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { format } from 'date-fns'
 import {
-  Plus, Download, Upload, Search, SlidersHorizontal,
-  ChevronLeft, ChevronRight, Loader2, RefreshCw,
+  Plus,
+  Download,
+  Upload,
+  Search,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react'
-import { toast }       from 'sonner'
+import { toast } from 'sonner'
 
-import { Button }      from '@/components/ui/button'
-import { Input }       from '@/components/ui/input'
-import { Badge }       from '@/components/ui/badge'
-import { Skeleton }    from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
-import { AssetTreePanel }    from '@/components/assets/AssetTreePanel'
+import { AssetTreePanel } from '@/components/assets/AssetTreePanel'
 import { CriticalityBadge, AssetStatusBadge } from '@/components/assets/AssetBadges'
-import { AssetForm }        from '@/components/assets/AssetForm'
+import { AssetForm } from '@/components/assets/AssetForm'
 import { BulkImportWizard } from '@/components/assets/BulkImportWizard'
-import { QRScannerModal }   from '@/components/assets/QRScannerModal'
+import { QRScannerModal } from '@/components/assets/QRScannerModal'
 
 import { useAssets, useCategories, useLocations, useCreateAsset } from '@/hooks/useAssets'
 import type { AssetCard, ListAssetsFilters, CreateAssetPayload } from '@/lib/api/assets'
@@ -40,29 +51,35 @@ export function AssetListClient() {
   const router = useRouter()
 
   // ── Sidebar state ──────────────────────────────────────────────────────────
-  const [sidebarOpen,      setSidebarOpen]      = useState(true)
-  const [treeSelectedId,   setTreeSelectedId]   = useState<string | null>(null)
-  const [newAssetOpen,     setNewAssetOpen]     = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [treeSelectedId, setTreeSelectedId] = useState<string | null>(null)
+  const [newAssetOpen, setNewAssetOpen] = useState(false)
   const [newChildParentId, setNewChildParentId] = useState<string | undefined>(undefined)
   const [importWizardOpen, setImportWizardOpen] = useState(false)
 
   // ── Filter state ───────────────────────────────────────────────────────────
-  const [search,      setSearch]      = useState('')
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [critFilter,  setCritFilter]  = useState<string>('all')
-  const [catFilter,   setCatFilter]   = useState<string>('all')
-  const [page,        setPage]        = useState(1)
+  const [critFilter, setCritFilter] = useState<string>('all')
+  const [catFilter, setCatFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
   const LIMIT = 20
 
   const filters: ListAssetsFilters = {
     page,
     limit: LIMIT,
-    ...(search.trim()           && { search:      search.trim() }),
-    ...(statusFilter !== 'all'  && { status:      [statusFilter] }),
-    ...(critFilter   !== 'all'  && { criticality: [critFilter] }),
-    ...(catFilter    !== 'all'  && { categoryId:  catFilter }),
-    ...(treeSelectedId          && { parentId:    treeSelectedId }),
+    ...(search.trim() && { search: search.trim() }),
+    ...(statusFilter !== 'all' && { status: [statusFilter] }),
+    ...(critFilter !== 'all' && { criticality: [critFilter] }),
+    ...(catFilter !== 'all' && { categoryId: catFilter }),
+    ...(treeSelectedId && { parentId: treeSelectedId }),
   }
+
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 300)
+    return () => clearTimeout(t)
+  }, [])
 
   const { data, isPending, error, refetch } = useAssets(filters)
   const { data: categories = [] } = useCategories()
@@ -70,7 +87,7 @@ export function AssetListClient() {
 
   // ── Tree select → filter ───────────────────────────────────────────────────
   const handleTreeSelect = useCallback((node: AssetFlatNode) => {
-    setTreeSelectedId((prev) => prev === node.id ? null : node.id)
+    setTreeSelectedId((prev) => (prev === node.id ? null : node.id))
     setPage(1)
   }, [])
 
@@ -83,30 +100,56 @@ export function AssetListClient() {
   function handleExport() {
     const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'
     const params = new URLSearchParams()
-    if (search)              params.set('search', search)
+    if (search) params.set('search', search)
     if (statusFilter !== 'all') params.set('status', statusFilter)
-    if (critFilter !== 'all')   params.set('criticality', critFilter)
-    if (catFilter !== 'all')    params.set('categoryId', catFilter)
+    if (critFilter !== 'all') params.set('criticality', critFilter)
+    if (catFilter !== 'all') params.set('categoryId', catFilter)
     window.location.href = `${BASE}/assets/export?${params.toString()}`
   }
 
   // ── Import — opens the wizard ──────────────────────────────────────────────
-  function handleImport() { setImportWizardOpen(true) }
+  function handleImport() {
+    setImportWizardOpen(true)
+  }
 
   const items = data?.items ?? []
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / LIMIT)
 
+  if (!mounted)
+    return (
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-64 shrink-0 border-r p-2 space-y-1">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
+        <div className="flex-1 p-6 space-y-2">
+          <Skeleton className="h-10 w-full" />
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded" />
+          ))}
+        </div>
+      </div>
+    )
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* ── Sidebar tree ─────────────────────────────────────────────────── */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} shrink-0 border-r bg-card flex flex-col transition-all duration-200 overflow-hidden`}>
+      <aside
+        className={`${sidebarOpen ? 'w-64' : 'w-0'} shrink-0 border-r bg-card flex flex-col transition-all duration-200 overflow-hidden`}
+      >
         <div className="flex items-center justify-between px-3 py-2 border-b">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Asset Tree</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Asset Tree
+          </span>
           {treeSelectedId && (
             <button
               type="button"
-              onClick={() => { setTreeSelectedId(null); setPage(1) }}
+              onClick={() => {
+                setTreeSelectedId(null)
+                setPage(1)
+              }}
               className="text-xs text-primary hover:underline"
             >
               Clear filter
@@ -144,20 +187,31 @@ export function AssetListClient() {
               <Input
                 placeholder="Search assets…"
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="pl-9"
               />
             </div>
 
             <div className="flex items-center gap-2 ml-auto">
               <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-1" />Export
+                <Download className="h-4 w-4 mr-1" />
+                Export
               </Button>
               <Button variant="outline" size="sm" onClick={handleImport}>
-                <Upload className="h-4 w-4 mr-1" />Import
+                <Upload className="h-4 w-4 mr-1" />
+                Import
               </Button>
-              <Button onClick={() => { setNewChildParentId(undefined); setNewAssetOpen(true) }}>
-                <Plus className="h-4 w-4 mr-1" />New Asset
+              <Button
+                onClick={() => {
+                  setNewChildParentId(undefined)
+                  setNewAssetOpen(true)
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Asset
               </Button>
             </div>
           </div>
@@ -166,7 +220,13 @@ export function AssetListClient() {
           <div className="flex items-center gap-2 flex-wrap">
             <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
 
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1) }}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setStatusFilter(v)
+                setPage(1)
+              }}
+            >
               <SelectTrigger className="h-8 w-36 text-xs">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -179,7 +239,13 @@ export function AssetListClient() {
               </SelectContent>
             </Select>
 
-            <Select value={critFilter} onValueChange={(v) => { setCritFilter(v); setPage(1) }}>
+            <Select
+              value={critFilter}
+              onValueChange={(v) => {
+                setCritFilter(v)
+                setPage(1)
+              }}
+            >
               <SelectTrigger className="h-8 w-32 text-xs">
                 <SelectValue placeholder="Criticality" />
               </SelectTrigger>
@@ -192,22 +258,38 @@ export function AssetListClient() {
               </SelectContent>
             </Select>
 
-            <Select value={catFilter} onValueChange={(v) => { setCatFilter(v); setPage(1) }}>
+            <Select
+              value={catFilter}
+              onValueChange={(v) => {
+                setCatFilter(v)
+                setPage(1)
+              }}
+            >
               <SelectTrigger className="h-8 w-40 text-xs">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
                 {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
             {(statusFilter !== 'all' || critFilter !== 'all' || catFilter !== 'all' || search) && (
               <Button
-                variant="ghost" size="sm" className="h-8 text-xs"
-                onClick={() => { setStatusFilter('all'); setCritFilter('all'); setCatFilter('all'); setSearch(''); setPage(1) }}
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setStatusFilter('all')
+                  setCritFilter('all')
+                  setCatFilter('all')
+                  setSearch('')
+                  setPage(1)
+                }}
               >
                 Clear
               </Button>
@@ -229,15 +311,29 @@ export function AssetListClient() {
             <div className="flex flex-col items-center gap-3 p-12 text-muted-foreground">
               <p>Failed to load assets</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
-                <RefreshCw className="h-4 w-4 mr-1" />Retry
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Retry
               </Button>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/50 sticky top-0">
                 <tr>
-                  {['Asset #', 'Name', 'Category', 'Location', 'Criticality', 'Status', 'MTBF', 'Open WOs', ''].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                  {[
+                    'Asset #',
+                    'Name',
+                    'Category',
+                    'Location',
+                    'Criticality',
+                    'Status',
+                    'MTBF',
+                    'Open WOs',
+                    '',
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                    >
                       {h}
                     </th>
                   ))}
@@ -266,10 +362,20 @@ export function AssetListClient() {
               Page {page} of {totalPages}
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -323,19 +429,28 @@ function AssetRow({ asset }: { asset: AssetCard }) {
       <td className="px-4 py-3">
         <div className="font-medium line-clamp-1">{asset.name}</div>
         {asset.manufacturer && (
-          <div className="text-xs text-muted-foreground">{asset.manufacturer} {asset.model}</div>
+          <div className="text-xs text-muted-foreground">
+            {asset.manufacturer} {asset.model}
+          </div>
         )}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{asset.categoryName}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{asset.locationName ?? '—'}</td>
-      <td className="px-4 py-3"><CriticalityBadge criticality={asset.criticality} /></td>
-      <td className="px-4 py-3"><AssetStatusBadge status={asset.status} /></td>
+      <td className="px-4 py-3">
+        <CriticalityBadge criticality={asset.criticality} />
+      </td>
+      <td className="px-4 py-3">
+        <AssetStatusBadge status={asset.status} />
+      </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">—</td>
       <td className="px-4 py-3">
-        {asset.openWOCount > 0
-          ? <Badge variant="destructive" className="text-xs">{asset.openWOCount}</Badge>
-          : <span className="text-xs text-muted-foreground">0</span>
-        }
+        {asset.openWOCount > 0 ? (
+          <Badge variant="destructive" className="text-xs">
+            {asset.openWOCount}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">0</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <Link

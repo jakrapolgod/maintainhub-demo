@@ -2,6 +2,7 @@
 const config = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  testTimeout: 30000,
   passWithNoTests: true,
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],

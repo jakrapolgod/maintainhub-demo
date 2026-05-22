@@ -10,35 +10,68 @@
  * Compliance  — per-schedule compliance % bars
  */
 
-import { useState, useMemo } from 'react'
-import Link                  from 'next/link'
-import { useRouter }         from 'next/navigation'
+import { useState, useMemo, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  format, startOfMonth, endOfMonth, eachDayOfInterval,
-  startOfWeek, endOfWeek, isSameMonth, parseISO, differenceInDays,
-  addMonths, subMonths,
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
+  parseISO,
+  differenceInDays,
+  addMonths,
+  subMonths,
 } from 'date-fns'
 import {
-  Plus, LayoutList, CalendarDays, BarChart3, ChevronLeft, ChevronRight,
-  RefreshCw, Zap, Copy, Loader2, CheckCircle2, XCircle, Clock,
+  Plus,
+  LayoutList,
+  CalendarDays,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Zap,
+  Copy,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Button }                          from '@/components/ui/button'
-import { Badge }                           from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress }                        from '@/components/ui/progress'
-import { Skeleton }                        from '@/components/ui/skeleton'
-import { Switch }                          from '@/components/ui/switch'
+import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 
 import {
-  usePMSchedules, usePMCalendar, usePMCompliance,
-  useActivatePMSchedule, useDeactivatePMSchedule, useTriggerPMSchedule,
+  usePMSchedules,
+  usePMCalendar,
+  usePMCompliance,
+  useActivatePMSchedule,
+  useDeactivatePMSchedule,
+  useTriggerPMSchedule,
 } from '@/hooks/usePMSchedules'
 import type { PMScheduleDto, PMCalendarEntry } from '@/lib/api/pm-schedules'
 
@@ -46,16 +79,19 @@ import type { PMScheduleDto, PMCalendarEntry } from '@/lib/api/pm-schedules'
 
 function nextDueColor(nextDueAt: string | null, isOverdue: boolean): string {
   if (!nextDueAt) return 'text-muted-foreground'
-  if (isOverdue)  return 'text-red-600 font-medium'
+  if (isOverdue) return 'text-red-600 font-medium'
   const days = differenceInDays(parseISO(nextDueAt), new Date())
-  if (days <= 7)  return 'text-amber-600 font-medium'
+  if (days <= 7) return 'text-amber-600 font-medium'
   return 'text-foreground'
 }
 
 function eventUrgencyClass(entry: PMCalendarEntry): string {
-  if (entry.isOverdue)        return 'bg-red-100 text-red-800 border-red-300'
-  const days = differenceInDays(parseISO(entry.assignees.length > 0 ? entry.assignees[0]!.id : new Date().toISOString()), new Date())
-  if (days <= 7)              return 'bg-amber-100 text-amber-800 border-amber-300'
+  if (entry.isOverdue) return 'bg-red-100 text-red-800 border-red-300'
+  const days = differenceInDays(
+    parseISO(entry.assignees.length > 0 ? entry.assignees[0]!.id : new Date().toISOString()),
+    new Date(),
+  )
+  if (days <= 7) return 'bg-amber-100 text-amber-800 border-amber-300'
   return 'bg-blue-100 text-blue-800 border-blue-300'
 }
 
@@ -65,7 +101,7 @@ function typeLabel(type: string): string {
 
 function typeBadgeVariant(type: string): 'info' | 'warning' | 'secondary' {
   if (type === 'CALENDAR') return 'info'
-  if (type === 'METER')    return 'warning'
+  if (type === 'METER') return 'warning'
   return 'secondary'
 }
 
@@ -79,36 +115,46 @@ function complianceColor(pct: number): string {
 
 export function PMSchedulesClient() {
   const router = useRouter()
-  const [view, setView]            = useState<'list' | 'calendar' | 'compliance'>('list')
+  const [view, setView] = useState<'list' | 'calendar' | 'compliance'>('list')
+
+  const [mounted, setMounted] = useState(false)
   const [calendarMonth, setCalendarMonth] = useState(new Date())
   const [selectedEntry, setSelectedEntry] = useState<PMCalendarEntry | null>(null)
-  const [sheetOpen, setSheetOpen]  = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
   // ── List query ──────────────────────────────────────────────────────────────
-  const listFilters = useMemo(() => ({
-    ...(activeFilter === 'active'   && { isActive: true }),
-    ...(activeFilter === 'inactive' && { isActive: false }),
-    limit: 100,
-  }), [activeFilter])
+  const listFilters = useMemo(
+    () => ({
+      ...(activeFilter === 'active' && { isActive: true }),
+      ...(activeFilter === 'inactive' && { isActive: false }),
+      limit: 100,
+    }),
+    [activeFilter],
+  )
 
   const { data: listData, isPending: listPending, refetch } = usePMSchedules(listFilters)
 
   // ── Calendar query ──────────────────────────────────────────────────────────
   const calFrom = format(startOfMonth(calendarMonth), 'yyyy-MM-dd') + 'T00:00:00.000Z'
-  const calTo   = format(endOfMonth(calendarMonth),   'yyyy-MM-dd') + 'T23:59:59.000Z'
+  const calTo = format(endOfMonth(calendarMonth), 'yyyy-MM-dd') + 'T23:59:59.000Z'
   const { data: calData, isPending: calPending } = usePMCalendar(
     view === 'calendar' ? calFrom : '',
-    view === 'calendar' ? calTo   : '',
+    view === 'calendar' ? calTo : '',
   )
 
   // ── Compliance query ────────────────────────────────────────────────────────
   const { data: complianceData, isPending: compPending } = usePMCompliance(12)
 
   // ── Mutations ───────────────────────────────────────────────────────────────
-  const activateMut   = useActivatePMSchedule()
+  const activateMut = useActivatePMSchedule()
   const deactivateMut = useDeactivatePMSchedule()
-  const triggerMut    = useTriggerPMSchedule()
+  const triggerMut = useTriggerPMSchedule()
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 300)
+    return () => clearTimeout(t)
+  }, [])
 
   function handleToggleActive(schedule: PMScheduleDto) {
     if (schedule.isActive) {
@@ -119,10 +165,21 @@ export function PMSchedulesClient() {
   }
 
   function handleTriggerNow(id: string) {
-    triggerMut.mutate({ id }, {
-      onSuccess: () => setSheetOpen(false),
-    })
+    triggerMut.mutate(
+      { id },
+      {
+        onSuccess: () => setSheetOpen(false),
+      },
+    )
   }
+
+  if (!mounted)
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    )
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -163,7 +220,10 @@ export function PMSchedulesClient() {
         </Tabs>
 
         {view === 'list' && (
-          <Select value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>
+          <Select
+            value={activeFilter}
+            onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}
+          >
             <SelectTrigger className="w-36 h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
@@ -183,30 +243,54 @@ export function PMSchedulesClient() {
           <div className="p-6">
             {listPending ? (
               <div className="space-y-2">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
               </div>
             ) : (listData?.items.length ?? 0) === 0 ? (
               <EmptyState onNew={() => router.push('/pm-schedules/new')} />
             ) : (
-              <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="overflow-x-auto rounded-xl border bg-card">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/40">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Title</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Asset</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Next Due</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Last Triggered</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tasks</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Active</th>
-                      <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Title
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Asset
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Next Due
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Last Triggered
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Tasks
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Active
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {listData?.items.map((s) => (
-                      <tr key={s.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <tr
+                        key={s.id}
+                        className="border-b last:border-0 hover:bg-muted/20 transition-colors"
+                      >
                         <td className="px-4 py-3">
-                          <Link href={`/pm-schedules/${s.id}/edit`} className="font-medium hover:underline">
+                          <Link
+                            href={`/pm-schedules/${s.id}/edit`}
+                            className="font-medium hover:underline"
+                          >
                             {s.title}
                           </Link>
                         </td>
@@ -219,11 +303,15 @@ export function PMSchedulesClient() {
                           <Badge variant={typeBadgeVariant(s.type)}>{typeLabel(s.type)}</Badge>
                         </td>
                         <td className={`px-4 py-3 ${nextDueColor(s.nextDueAt, s.isOverdue)}`}>
-                          {s.nextDueAt
-                            ? format(parseISO(s.nextDueAt), 'dd MMM yyyy')
-                            : <span className="text-muted-foreground">—</span>}
+                          {s.nextDueAt ? (
+                            format(parseISO(s.nextDueAt), 'dd MMM yyyy')
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                           {s.isOverdue && (
-                            <Badge variant="destructive" className="ml-2 py-0 px-1.5 text-[10px]">Overdue</Badge>
+                            <Badge variant="destructive" className="ml-2 py-0 px-1.5 text-[10px]">
+                              Overdue
+                            </Badge>
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
@@ -243,7 +331,8 @@ export function PMSchedulesClient() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button
-                              variant="ghost" size="sm"
+                              variant="ghost"
+                              size="sm"
                               disabled={!s.isActive || triggerMut.isPending}
                               onClick={() => handleTriggerNow(s.id)}
                               title="Manual trigger"
@@ -252,8 +341,7 @@ export function PMSchedulesClient() {
                             </Button>
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/pm-schedules/${s.id}/edit`} title="Edit">
-                                <span className="sr-only">Edit</span>
-                                ✎
+                                <span className="sr-only">Edit</span>✎
                               </Link>
                             </Button>
                           </div>
@@ -272,17 +360,23 @@ export function PMSchedulesClient() {
           <div className="p-6">
             {/* Month navigation */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">
-                {format(calendarMonth, 'MMMM yyyy')}
-              </h2>
+              <h2 className="text-lg font-semibold">{format(calendarMonth, 'MMMM yyyy')}</h2>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCalendarMonth(subMonths(calendarMonth, 1))}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setCalendarMonth(new Date())}>
                   Today
                 </Button>
-                <Button variant="outline" size="icon" onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCalendarMonth(addMonths(calendarMonth, 1))}
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -294,7 +388,10 @@ export function PMSchedulesClient() {
               <PMCalendarGrid
                 month={calendarMonth}
                 days={calData?.days ?? []}
-                onEntryClick={(entry) => { setSelectedEntry(entry); setSheetOpen(true) }}
+                onEntryClick={(entry) => {
+                  setSelectedEntry(entry)
+                  setSheetOpen(true)
+                }}
               />
             )}
           </div>
@@ -305,7 +402,9 @@ export function PMSchedulesClient() {
           <div className="p-6">
             {compPending ? (
               <div className="space-y-3">
-                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                ))}
               </div>
             ) : (
               <>
@@ -313,7 +412,9 @@ export function PMSchedulesClient() {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   <Card>
                     <CardContent className="pt-4 pb-3">
-                      <div className={`text-3xl font-bold ${complianceColor(complianceData?.overallCompliancePct ?? 0)}`}>
+                      <div
+                        className={`text-3xl font-bold ${complianceColor(complianceData?.overallCompliancePct ?? 0)}`}
+                      >
                         {complianceData?.overallCompliancePct ?? 0}%
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">Overall compliance</div>
@@ -321,45 +422,68 @@ export function PMSchedulesClient() {
                   </Card>
                   <Card>
                     <CardContent className="pt-4 pb-3">
-                      <div className="text-3xl font-bold text-green-600">{complianceData?.fullyCompliant ?? 0}</div>
+                      <div className="text-3xl font-bold text-green-600">
+                        {complianceData?.fullyCompliant ?? 0}
+                      </div>
                       <div className="text-sm text-muted-foreground mt-1">Fully compliant</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="pt-4 pb-3">
-                      <div className="text-3xl font-bold">{complianceData?.totalSchedules ?? 0}</div>
+                      <div className="text-3xl font-bold">
+                        {complianceData?.totalSchedules ?? 0}
+                      </div>
                       <div className="text-sm text-muted-foreground mt-1">Total schedules</div>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Per-schedule compliance table */}
-                <div className="rounded-xl border bg-card overflow-hidden">
+                <div className="overflow-x-auto rounded-xl border bg-card">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/40">
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Schedule</th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Asset</th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Planned</th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actual</th>
-                        <th className="px-4 py-3 text-left font-medium text-muted-foreground min-w-40">Compliance</th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          Schedule
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          Asset
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          Type
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          Planned
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                          Actual
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-muted-foreground min-w-40">
+                          Compliance
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {(complianceData?.schedules ?? []).map((row) => (
-                        <tr key={row.scheduleId} className="border-b last:border-0 hover:bg-muted/20">
+                        <tr
+                          key={row.scheduleId}
+                          className="border-b last:border-0 hover:bg-muted/20"
+                        >
                           <td className="px-4 py-3 font-medium">{row.title}</td>
                           <td className="px-4 py-3 text-muted-foreground">{row.assetName}</td>
                           <td className="px-4 py-3">
-                            <Badge variant={typeBadgeVariant(row.type)}>{typeLabel(row.type)}</Badge>
+                            <Badge variant={typeBadgeVariant(row.type)}>
+                              {typeLabel(row.type)}
+                            </Badge>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{row.plannedTriggers}</td>
                           <td className="px-4 py-3">{row.actualTriggers}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <Progress value={row.compliancePct} className="h-2 flex-1" />
-                              <span className={`text-xs font-medium w-10 text-right ${complianceColor(row.compliancePct)}`}>
+                              <span
+                                className={`text-xs font-medium w-10 text-right ${complianceColor(row.compliancePct)}`}
+                              >
                                 {row.compliancePct}%
                               </span>
                             </div>
@@ -393,7 +517,9 @@ export function PMSchedulesClient() {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Status</p>
-                  <p className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-green-600'}`}>
+                  <p
+                    className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-green-600'}`}
+                  >
                     {selectedEntry.isOverdue ? 'Overdue' : 'On schedule'}
                   </p>
                 </div>
@@ -404,7 +530,9 @@ export function PMSchedulesClient() {
                   <p className="text-sm text-muted-foreground mb-1">Assigned to</p>
                   <div className="flex flex-wrap gap-1">
                     {selectedEntry.assignees.map((a) => (
-                      <Badge key={a.id} variant="secondary">{a.name}</Badge>
+                      <Badge key={a.id} variant="secondary">
+                        {a.name}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -415,11 +543,18 @@ export function PMSchedulesClient() {
                 onClick={() => handleTriggerNow(selectedEntry.scheduleId)}
                 disabled={triggerMut.isPending}
               >
-                {triggerMut.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                {triggerMut.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 mr-2" />
+                )}
                 Trigger Now
               </Button>
               <Button variant="outline" className="w-full" asChild>
-                <Link href={`/pm-schedules/${selectedEntry.scheduleId}/edit`} onClick={() => setSheetOpen(false)}>
+                <Link
+                  href={`/pm-schedules/${selectedEntry.scheduleId}/edit`}
+                  onClick={() => setSheetOpen(false)}
+                >
                   Edit Schedule
                 </Link>
               </Button>
@@ -434,18 +569,18 @@ export function PMSchedulesClient() {
 // ── PMCalendarGrid ─────────────────────────────────────────────────────────────
 
 interface PMCalendarGridProps {
-  month:        Date
-  days:         Array<{ date: string; entries: PMCalendarEntry[] }>
+  month: Date
+  days: Array<{ date: string; entries: PMCalendarEntry[] }>
   onEntryClick: (entry: PMCalendarEntry) => void
 }
 
 function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
   // Build a 6-week grid (Sun–Sat) covering the month
-  const monthStart  = startOfMonth(month)
-  const monthEnd    = endOfMonth(month)
-  const gridStart   = startOfWeek(monthStart)
-  const gridEnd     = endOfWeek(monthEnd)
-  const gridDays    = eachDayOfInterval({ start: gridStart, end: gridEnd })
+  const monthStart = startOfMonth(month)
+  const monthEnd = endOfMonth(month)
+  const gridStart = startOfWeek(monthStart)
+  const gridEnd = endOfWeek(monthEnd)
+  const gridDays = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
   const entryByDate = new Map(days.map((d) => [d.date, d.entries]))
 
@@ -465,10 +600,10 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
       {/* Calendar grid */}
       <div className="grid grid-cols-7">
         {gridDays.map((day, idx) => {
-          const dateStr  = format(day, 'yyyy-MM-dd')
-          const entries  = entryByDate.get(dateStr) ?? []
+          const dateStr = format(day, 'yyyy-MM-dd')
+          const entries = entryByDate.get(dateStr) ?? []
           const isOtherMonth = !isSameMonth(day, month)
-          const isToday  = dateStr === format(new Date(), 'yyyy-MM-dd')
+          const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
 
           return (
             <div
@@ -478,13 +613,15 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
               } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
             >
               {/* Day number */}
-              <div className={`w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 ${
-                isToday
-                  ? 'bg-primary text-primary-foreground font-bold'
-                  : isOtherMonth
-                  ? 'text-muted-foreground'
-                  : 'font-medium'
-              }`}>
+              <div
+                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 ${
+                  isToday
+                    ? 'bg-primary text-primary-foreground font-bold'
+                    : isOtherMonth
+                      ? 'text-muted-foreground'
+                      : 'font-medium'
+                }`}
+              >
                 {format(day, 'd')}
               </div>
 
@@ -505,7 +642,9 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
                   </button>
                 ))}
                 {entries.length > 3 && (
-                  <p className="text-[10px] text-muted-foreground pl-1">+{entries.length - 3} more</p>
+                  <p className="text-[10px] text-muted-foreground pl-1">
+                    +{entries.length - 3} more
+                  </p>
                 )}
               </div>
             </div>

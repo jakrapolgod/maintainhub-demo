@@ -80,6 +80,8 @@ type View = 'table' | 'kanban' | 'calendar'
 export function WorkOrderListClient() {
   const router = useRouter()
   const [view, setView] = useState<View>('table')
+
+  const [mounted, setMounted] = useState(false)
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
 
   // ── Filter state ──────────────────────────────────────────────────────────
@@ -88,6 +90,11 @@ export function WorkOrderListClient() {
   const [priorityFilter, setPriorityFilter] = useState<WOPriority | 'all'>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 300)
+    return () => clearTimeout(t)
+  }, [])
 
   const filters: ListWorkOrdersFilters = {
     ...(search && { search }),
@@ -101,6 +108,8 @@ export function WorkOrderListClient() {
   function toggleStatus(s: WOStatus) {
     setStatusFilter((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   }
+
+  if (!mounted) return <TableSkeleton />
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -272,7 +281,7 @@ function TableView({
     <div className="p-6">
       <p className="mb-3 text-xs text-muted-foreground">{total} work orders</p>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="overflow-x-auto rounded-lg border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>

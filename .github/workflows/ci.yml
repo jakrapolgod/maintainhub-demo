@@ -92,3 +92,114 @@ jobs:
         # environment variables here as GitHub Actions secrets:
         # env:
         #   DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+
+  # ── E2E Tests ──────────────────────────────────────────────────────────────
+  # Runs after the unit/build job passes. Spins up the full stack (DB, Redis,
+  # API, web) inside the runner so Playwright can drive a real browser.
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: ci
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: maintainhub_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @maintainhub/api db:generate
+
+      - name: Run database migrations
+        run: pnpm --filter @maintainhub/api db:migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maintainhub_e2e
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      # Start the API server in the background and wait for it to be ready.
+      - name: Start API server
+        run: pnpm --filter @maintainhub/api start &
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maintainhub_e2e
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ${{ secrets.CI_JWT_ACCESS_SECRET || 'ci-access-secret-at-least-32-chars!!' }}
+          JWT_REFRESH_SECRET: ${{ secrets.CI_JWT_REFRESH_SECRET || 'ci-refresh-secret-at-least-32-chars!!' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || 'sk-placeholder' }}
+          NODE_ENV: test
+          PORT: 4000
+
+      - name: Wait for API
+        run: npx wait-on http://localhost:4000/health --timeout 30000
+
+      # Build and start the Next.js app.
+      - name: Build web app
+        run: pnpm --filter @maintainhub/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+
+      - name: Start web server
+        run: pnpm --filter @maintainhub/web start --port 3000 &
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+          PORT: 3000
+
+      - name: Wait for web server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          BASE_URL: http://localhost:3000
+          API_URL: http://localhost:4000/api/v1
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
