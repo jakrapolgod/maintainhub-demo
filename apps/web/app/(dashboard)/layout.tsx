@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   BarChart2,
 } from 'lucide-react'
+import { NotificationBell } from '@/components/notification-panel'
 
 export const metadata: Metadata = {
   title: { template: '%s | MaintainHub', default: 'Dashboard | MaintainHub' },
@@ -80,9 +81,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Main content area ─────────────────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile top bar */}
-        <header className="flex h-14 items-center border-b px-4 lg:hidden">
-          <span className="font-bold text-sm">MaintainHub</span>
+        {/* Top bar (desktop + mobile) */}
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
+          {/* Mobile: show logo */}
+          <span className="font-bold text-sm lg:hidden">MaintainHub</span>
+          {/* Spacer */}
+          <div className="flex-1" />
+          {/* Notification bell */}
+          <NotificationBell />
         </header>
 
         <main className="flex-1 overflow-hidden">{children}</main>
