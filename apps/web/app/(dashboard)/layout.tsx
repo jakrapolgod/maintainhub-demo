@@ -1,6 +1,13 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import { Wrench, Package2, ClipboardList, LayoutDashboard, CalendarCheck } from 'lucide-react'
+import {
+  Wrench,
+  Package2,
+  ClipboardList,
+  LayoutDashboard,
+  CalendarCheck,
+  BarChart2,
+} from 'lucide-react'
 
 export const metadata: Metadata = {
   title: { template: '%s | MaintainHub', default: 'Dashboard | MaintainHub' },
@@ -17,11 +24,7 @@ export const metadata: Metadata = {
  * For now it provides the authenticated-route wrapper and a consistent
  * content area so work-order pages have a predictable parent layout.
  */
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* ── Future: Sidebar ─────────────────────────────── */}
@@ -59,6 +62,13 @@ export default function DashboardLayout({
             PM Schedules
           </Link>
           <Link
+            href="/analytics"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+            Analytics
+          </Link>
+          <Link
             href="/inventory"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
           >
@@ -75,9 +85,7 @@ export default function DashboardLayout({
           <span className="font-bold text-sm">MaintainHub</span>
         </header>
 
-        <main className="flex-1 overflow-hidden">
-          {children}
-        </main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
     </div>
   )
