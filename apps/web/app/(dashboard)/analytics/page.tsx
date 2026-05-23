@@ -124,7 +124,7 @@ export default function AnalyticsPage() {
                     <Tooltip {...tip} />
                     <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                     {ASSETS.map((a, i) => (
-                      <Line key={a} dataKey={a} stroke={COLORS[i]} dot={false} strokeWidth={1.5} />
+                      <Line key={a} dataKey={a} stroke={COLORS[i]!} dot={false} strokeWidth={1.5} />
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
                   <Tooltip {...tip} />
                   <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   {['CORRECTIVE', 'PREVENTIVE', 'INSPECTION'].map((t, i) => (
-                    <Bar key={t} dataKey={t} stackId="a" fill={COLORS[i]} />
+                    <Bar key={t} dataKey={t} stackId="a" fill={COLORS[i]!} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>
@@ -163,14 +163,14 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     outerRadius={70}
-                    label={({ name, percent }) => `${name} ${(percent * 100) | 0}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100) | 0}%`}
                     labelLine={false}
                   >
                     {costPie.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i]} />
+                      <Cell key={i} fill={PIE_COLORS[i]!} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} {...tip} />
+                  <Tooltip formatter={(v) => `$${Number(v).toLocaleString()}`} {...tip} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -187,10 +187,10 @@ export default function AnalyticsPage() {
                     width={40}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} {...tip} />
+                  <Tooltip formatter={(v) => `$${Number(v).toLocaleString()}`} {...tip} />
                   <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   {['Mechanical', 'Electrical', 'HVAC', 'Civil'].map((c, i) => (
-                    <Bar key={c} dataKey={c} stackId="b" fill={COLORS[i]} />
+                    <Bar key={c} dataKey={c} stackId="b" fill={COLORS[i]!} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>
