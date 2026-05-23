@@ -61,10 +61,10 @@ export default function InventoryPage() {
       <div className="p-6 space-y-4">
         {/* Summary */}
         <div className="grid grid-cols-3 gap-3">
-          {[['Total SKUs', '10', false], ['Low Stock', String(low), true], ['Total Value', `฿${total.toLocaleString()}`, false]].map(([label, val, red]) => (
+          {([{ label: 'Total SKUs', val: '10', red: false }, { label: 'Low Stock', val: String(low), red: true }, { label: 'Total Value', val: `฿${total.toLocaleString()}`, red: false }] as const).map(({ label, val, red }) => (
             <div key={label} className="rounded-xl border bg-card p-4">
               <p className="text-xs text-muted-foreground">{label}</p>
-              <p className={cn('mt-1 text-2xl font-bold', red === true && low > 0 && 'text-red-600')}>{val}</p>
+              <p className={cn('mt-1 text-2xl font-bold', red && low > 0 && 'text-red-600')}>{val}</p>
             </div>
           ))}
         </div>
