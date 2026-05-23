@@ -8,6 +8,7 @@ import {
   Package,
   CalendarClock,
   BarChart3,
+  Boxes,
   Settings,
   Bell,
   Menu as MenuIcon,
@@ -38,6 +39,7 @@ const navLinks = [
   { href: "/work-orders", label: "Work Orders",  icon: ClipboardList   },
   { href: "/assets",      label: "Assets",       icon: Package         },
   { href: "/pm-schedules",label: "PM Schedules", icon: CalendarClock   },
+  { href: "/inventory",   label: "Inventory",    icon: Boxes           },
   { href: "/analytics",   label: "Analytics",    icon: BarChart3       },
   { href: "/settings",    label: "Settings",     icon: Settings        },
 ] as const
@@ -47,6 +49,7 @@ const pathTitles: Record<string, string> = {
   "/work-orders":  "Work Orders",
   "/assets":       "Assets",
   "/pm-schedules": "PM Schedules",
+  "/inventory":    "Inventory",
   "/analytics":    "Analytics",
   "/settings":     "Settings",
 }

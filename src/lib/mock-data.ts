@@ -99,3 +99,30 @@ export const users: User[] = [
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export const getUserById  = (id: string): User  | undefined => users.find(u => u.id === id);
 export const getAssetById = (id: string): Asset | undefined => assets.find(a => a.id === id);
+
+// ── Spare Parts ───────────────────────────────────────────────────────────────
+export type PartCategory = "Mechanical" | "Electrical" | "Consumable";
+
+export interface SparePart {
+  partNumber: string;
+  name: string;
+  category: PartCategory;
+  quantity: number;
+  minStock: number;
+  unitCost: number;
+  location: string;
+  supplier: string;
+}
+
+export const spareParts: SparePart[] = [
+  { partNumber: "PT-001", name: "Bearing 6205",           category: "Mechanical",  quantity: 15, minStock:  5, unitCost:    450, location: "Warehouse A", supplier: "NSK Thailand" },
+  { partNumber: "PT-002", name: "V-Belt B48",             category: "Mechanical",  quantity:  8, minStock: 10, unitCost:    320, location: "Warehouse A", supplier: "Gates Rubber" },
+  { partNumber: "PT-003", name: "Oil Seal 40×60",         category: "Mechanical",  quantity: 20, minStock:  8, unitCost:    180, location: "Warehouse B", supplier: "NOK Freudenberg" },
+  { partNumber: "PT-004", name: "Contactor LC1D25",       category: "Electrical",  quantity:  4, minStock:  5, unitCost:  2_800, location: "Warehouse B", supplier: "Schneider Electric" },
+  { partNumber: "PT-005", name: "Fuse 32A",               category: "Electrical",  quantity: 50, minStock: 20, unitCost:     85, location: "Warehouse C", supplier: "Siemens TH" },
+  { partNumber: "PT-006", name: "Air Filter Cartridge",   category: "Consumable",  quantity: 12, minStock:  6, unitCost:  1_200, location: "Warehouse A", supplier: "Donaldson Asia" },
+  { partNumber: "PT-007", name: "Hydraulic Pump Gear Set",category: "Mechanical",  quantity:  2, minStock:  3, unitCost: 18_500, location: "Warehouse B", supplier: "Bosch Rexroth" },
+  { partNumber: "PT-008", name: "Pressure Gauge 0-10bar", category: "Electrical",  quantity:  8, minStock:  4, unitCost:    680, location: "Warehouse C", supplier: "Wika Thailand" },
+  { partNumber: "PT-009", name: "Grease Cartridge 400g",  category: "Consumable",  quantity: 30, minStock: 12, unitCost:    220, location: "Warehouse A", supplier: "SKF Lubrication" },
+  { partNumber: "PT-010", name: "Motor 3kW 4P",           category: "Electrical",  quantity:  4, minStock:  2, unitCost: 38_500, location: "Warehouse B", supplier: "WEG Electric" },
+];
