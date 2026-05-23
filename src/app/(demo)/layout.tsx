@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -31,6 +32,9 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { DemoBanner } from "@/components/DemoBanner"
+import { NotificationPanel } from "@/components/NotificationPanel"
+import { notifications as initialNotifications } from "@/lib/mock-data"
+import type { Notification } from "@/lib/mock-data"
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
@@ -153,6 +157,20 @@ export default function DemoLayout({
   const pathname = usePathname()
   const pageTitle = pathTitles[pathname] ?? "MaintainHub"
 
+  // ── Notification state ──────────────────────────────────────────────────────
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifs, setNotifs] = useState<Notification[]>(initialNotifications)
+  const unreadCount = notifs.filter((n) => !n.isRead).length
+
+  function markAllRead() {
+    setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })))
+  }
+  function markRead(id: string) {
+    setNotifs((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    )
+  }
+
   return (
     <div className="flex h-full min-h-dvh flex-col bg-background">
       <DemoBanner />
@@ -184,13 +202,19 @@ export default function DemoLayout({
           <h1 className="flex-1 truncate text-base font-semibold">{pageTitle}</h1>
 
           {/* Bell notification */}
-          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            aria-label="Notifications"
+            onClick={() => setNotifOpen(true)}
+          >
             <Bell className="size-5" />
-            <Badge
-              className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full p-0 text-[10px] leading-none"
-            >
-              3
-            </Badge>
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full p-0 text-[10px] leading-none">
+                {unreadCount}
+              </Badge>
+            )}
           </Button>
 
           {/* User dropdown */}
@@ -201,6 +225,15 @@ export default function DemoLayout({
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
       </div>
+
+      {/* Notification panel */}
+      <NotificationPanel
+        open={notifOpen}
+        onOpenChange={setNotifOpen}
+        notifications={notifs}
+        onMarkAllRead={markAllRead}
+        onMarkRead={markRead}
+      />
     </div>
   )
 }
