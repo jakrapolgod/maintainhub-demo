@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { DemoBanner } from "@/components/DemoBanner"
+import { Toaster } from "@/components/ui/sonner"
 import { NotificationPanel } from "@/components/NotificationPanel"
 import { notifications as initialNotifications } from "@/lib/mock-data"
 import type { Notification } from "@/lib/mock-data"
@@ -225,6 +226,8 @@ export default function DemoLayout({
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
       </div>
+
+      <Toaster richColors position="bottom-right" />
 
       {/* Notification panel */}
       <NotificationPanel
