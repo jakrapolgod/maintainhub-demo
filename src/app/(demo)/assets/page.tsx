@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { assets, workOrders, type AssetStatus, type CriticalityClass } from '@/lib/mock-data'
 import { AssetTree, type TreeSelection } from '@/components/assets/AssetTree'
+import { Eye, MoreHorizontal } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -55,26 +56,62 @@ const CRIT_LABEL: Record<CriticalityClass, string> = {
 
 function AssetCard({ asset }: { asset: (typeof assets)[number] }) {
   const router = useRouter()
-  const [hovered, setHovered] = useState(false)
   const lastWO = lastWODate(asset.id)
   const category = categoryFromName(asset.name)
 
   return (
     <div
-      className="relative rounded-lg border bg-card p-4 transition-shadow hover:shadow-md"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(`/assets/${asset.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') router.push(`/assets/${asset.id}`)
+      }}
+      className="group relative cursor-pointer overflow-hidden rounded-lg border bg-card p-4 transition-all duration-150 hover:bg-muted/40 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
+      {/* left accent border — scales in on hover */}
+      <div className="absolute inset-y-0 left-0 w-[3px] origin-center scale-y-0 bg-primary transition-transform duration-150 group-hover:scale-y-100" />
+
       {/* header row */}
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-mono text-xs text-muted-foreground">{asset.tag}</p>
-          <p className="mt-0.5 truncate font-semibold leading-snug">{asset.name}</p>
+          <p className="mt-0.5 truncate font-semibold leading-snug transition-colors duration-150 group-hover:text-primary group-hover:underline">
+            {asset.name}
+          </p>
         </div>
-        {/* category badge */}
-        <Badge variant="outline" className="shrink-0 text-xs">
-          {category}
-        </Badge>
+
+        {/* category badge + icon actions (fade in on hover) */}
+        <div className="flex shrink-0 items-center gap-1">
+          <Badge variant="outline" className="text-xs">
+            {category}
+          </Badge>
+          <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              tabIndex={-1}
+              aria-label="View asset"
+              onClick={(e) => {
+                e.stopPropagation()
+                router.push(`/assets/${asset.id}`)
+              }}
+            >
+              <Eye className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              tabIndex={-1}
+              aria-label="More options"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* status */}
@@ -97,15 +134,6 @@ function AssetCard({ asset }: { asset: (typeof assets)[number] }) {
         </div>
         {lastWO && <span>Last WO: {lastWO}</span>}
       </div>
-
-      {/* hover "View" button */}
-      {hovered && (
-        <div className="absolute inset-0 flex items-end justify-end rounded-lg bg-background/60 p-3 backdrop-blur-sm">
-          <Button size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
-            View
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

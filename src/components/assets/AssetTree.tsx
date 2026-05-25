@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { assets, workOrders, type CriticalityClass } from '@/lib/mock-data'
 import { Badge } from '@/components/ui/badge'
@@ -76,32 +77,40 @@ function AssetRow({
   selected: boolean
   onClick: () => void
 }) {
+  const router = useRouter()
   const asset = assets.find((a) => a.id === assetId)
   if (!asset) return null
   const wos = openWOCount(assetId)
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        onClick()
+        router.push(`/assets/${assetId}`)
+      }}
       className={cn(
-        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+        'group relative flex w-full cursor-pointer items-center gap-2 rounded-md border-l-2 px-2 py-1.5 text-left text-sm transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         selected
-          ? 'bg-primary/10 text-primary font-medium'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          ? 'border-l-primary bg-primary/10 font-medium text-primary'
+          : 'border-l-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
     >
       {/* criticality dot */}
       <span className={cn('size-2 shrink-0 rounded-full', CRIT_DOT[asset.criticality])} />
       {/* tag */}
-      <span className="font-mono text-xs text-muted-foreground shrink-0">{asset.tag}</span>
-      {/* name */}
-      <span className="min-w-0 flex-1 truncate">{asset.name}</span>
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">{asset.tag}</span>
+      {/* name — weight shifts on hover */}
+      <span className="min-w-0 flex-1 truncate transition-all duration-150 group-hover:font-semibold">
+        {asset.name}
+      </span>
       {/* open WO badge */}
       {wos > 0 && (
         <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px] leading-4">
           {wos}
         </Badge>
       )}
+      {/* chevron fades in on hover */}
+      <ChevronRight className="size-3.5 shrink-0 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
     </button>
   )
 }
@@ -125,7 +134,7 @@ function GroupRow({
       {/* expand/collapse chevron */}
       <button
         onClick={onToggle}
-        className="rounded p-0.5 text-muted-foreground hover:bg-muted"
+        className="rounded p-0.5 text-muted-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={open ? 'Collapse' : 'Expand'}
       >
         <Chevron className="size-3.5" />
@@ -134,11 +143,11 @@ function GroupRow({
       <button
         onClick={onClick}
         className={cn(
-          'flex-1 rounded-md px-1.5 py-1 text-left text-sm font-medium transition-colors',
+          'group flex-1 cursor-pointer rounded-md px-1.5 py-1 text-left text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           selected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
         )}
       >
-        {group.label}
+        <span className="transition-all duration-150 group-hover:font-semibold">{group.label}</span>
       </button>
     </div>
   )
@@ -193,11 +202,12 @@ export function AssetTree({ selection, onSelect }: AssetTreeProps) {
       <button
         onClick={handleAllClick}
         className={cn(
-          'flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-semibold transition-colors',
+          'group flex w-full cursor-pointer items-center rounded-md px-2 py-1.5 text-left text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           allSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
         )}
       >
-        All Assets
+        <span className="flex-1">All Assets</span>
+        <ChevronRight className="size-3.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
       </button>
 
       {/* groups */}
