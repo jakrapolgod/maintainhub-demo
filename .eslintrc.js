@@ -94,6 +94,9 @@ module.exports = {
       files: ['src/**/*.{ts,tsx}'],
       rules: {
         'import/no-extraneous-dependencies': 'off',
+        // Path-alias imports (e.g. @/components/ui/label) are always resolved by
+        // TypeScript/webpack and must not carry a file extension.
+        'import/extensions': 'off',
       },
     },
   ],
