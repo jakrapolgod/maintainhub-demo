@@ -2,19 +2,23 @@ export async function POST(request: Request) {
   const body = await request.json()
   const period: string = body.period ?? 'month'
 
-  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+  const upstream = await fetch(`${process.env.OPENROUTER_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY!}`,
+      'HTTP-Referer': 'https://maintainhub-demo.vercel.app',
+      'X-Title': 'MaintainHub Demo',
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'anthropic/claude-sonnet-4-5',
       max_tokens: 600,
       stream: true,
-      system: `You are a maintenance manager. Write a concise ${period} report summary in 3 sections: Performance, Issues, Recommendations. Use bullet points.`,
       messages: [
+        {
+          role: 'system',
+          content: `You are a maintenance manager. Write a concise ${period} report summary in 3 sections: Performance, Issues, Recommendations. Use bullet points.`,
+        },
         {
           role: 'user',
           content: `Generate a ${period} maintenance report based on this data: ${JSON.stringify(body.data ?? {})}`,
@@ -38,8 +42,8 @@ export async function POST(request: Request) {
             if (payload === '[DONE]') continue
             try {
               const event = JSON.parse(payload)
-              if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
-                controller.enqueue(encoder.encode(event.delta.text))
+              if (event.choices?.[0]?.delta?.content) {
+                controller.enqueue(encoder.encode(event.choices[0].delta.content))
               }
             } catch {
               // skip malformed lines

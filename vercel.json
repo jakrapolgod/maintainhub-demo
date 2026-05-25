@@ -4,6 +4,8 @@
   "buildCommand": "pnpm --filter @maintainhub/web build",
   "outputDirectory": "apps/web/.next",
   "env": {
-    "NEXT_PUBLIC_DEMO_MODE": "true"
+    "NEXT_PUBLIC_DEMO_MODE": "true",
+    "OPENROUTER_API_KEY": "@openrouter_api_key",
+    "OPENROUTER_BASE_URL": "@openrouter_base_url"
   }
 }
