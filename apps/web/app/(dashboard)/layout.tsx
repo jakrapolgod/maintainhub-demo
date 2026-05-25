@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { NotificationBell } from '@/components/notification-panel'
 import { SidebarNav } from '@/components/sidebar-nav'
+import { GlobalSearchTrigger } from '@/components/global-search'
 
 export const metadata: Metadata = {
   title: { template: '%s | MaintainHub', default: 'Dashboard | MaintainHub' },
@@ -33,6 +34,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="font-bold text-sm lg:hidden">MaintainHub</span>
           {/* Spacer */}
           <div className="flex-1" />
+          {/* Global search */}
+          <GlobalSearchTrigger />
           {/* Notification bell */}
           <NotificationBell />
         </header>
