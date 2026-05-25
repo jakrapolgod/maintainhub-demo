@@ -321,7 +321,7 @@ export default function PMSchedulesPage() {
               <SheetHeader>
                 <SheetTitle>{selected.title}</SheetTitle>
                 <SheetDescription>
-                  {getAssetById(selected.assetId)?.name ?? '—'} · {selected.type}
+                  {getAssetById(selected.assetId)?.name ?? '—'} · {selected.triggerType}
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-4 space-y-4 px-4">

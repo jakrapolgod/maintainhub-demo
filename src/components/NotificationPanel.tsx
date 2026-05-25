@@ -1,26 +1,20 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { AlertTriangle, Bell, Package, CheckCheck } from "lucide-react"
+import { useRouter } from 'next/navigation'
+import { AlertTriangle, Bell, Package, CheckCheck } from 'lucide-react'
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { type Notification, type NotificationType } from "@/lib/mock-data"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { type Notification, type NotificationType } from '@/lib/mock-data'
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
 function NotifIcon({ type }: { type: NotificationType }) {
-  if (type === "LOW_STOCK") {
+  if (type === 'LOW_STOCK') {
     return <Package className="size-4 shrink-0 text-amber-500" />
   }
-  if (type === "WO_ASSIGNED" || type === "PM_DUE") {
+  if (type === 'WO_ASSIGNED' || type === 'PM_DUE') {
     return <Bell className="size-4 shrink-0 text-blue-500" />
   }
   // WO_OVERDUE | SLA_BREACH
@@ -32,10 +26,10 @@ function NotifIcon({ type }: { type: NotificationType }) {
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
-  if (mins < 1)  return "just now"
+  if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24)  return `${hrs}h ago`
+  if (hrs < 24) return `${hrs}h ago`
   return `${Math.floor(hrs / 24)}d ago`
 }
 
@@ -69,11 +63,7 @@ export function NotificationPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-[360px] flex-col p-0"
-        showCloseButton={false}
-      >
+      <SheetContent side="right" className="flex w-[360px] flex-col p-0" showCloseButton={false}>
         {/* Header */}
         <SheetHeader className="flex flex-row items-center justify-between border-b px-4 py-3 space-y-0">
           <SheetTitle className="text-base">
@@ -111,8 +101,8 @@ export function NotificationPanel({
                   <button
                     onClick={() => handleItemClick(n)}
                     className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60",
-                      !n.isRead && "bg-blue-50/60 dark:bg-blue-950/20"
+                      'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60',
+                      !n.isRead && 'bg-blue-50/60 dark:bg-blue-950/20',
                     )}
                   >
                     {/* Type icon */}
@@ -124,8 +114,8 @@ export function NotificationPanel({
                     <div className="min-w-0 flex-1">
                       <p
                         className={cn(
-                          "truncate text-sm leading-snug",
-                          !n.isRead ? "font-semibold" : "font-medium text-muted-foreground"
+                          'truncate text-sm leading-snug',
+                          !n.isRead ? 'font-semibold' : 'font-medium text-muted-foreground',
                         )}
                       >
                         {n.title}
