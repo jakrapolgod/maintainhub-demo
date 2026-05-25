@@ -23,18 +23,83 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { workOrders, getUserById } from '@/lib/mock-data'
+import {
+  workOrders,
+  getUserById,
+  assets,
+  pmSchedules,
+  assetReliability,
+  monthlyWOVolume,
+  mttrTrend,
+} from '@/lib/mock-data'
+
+// ── Computed KPIs ─────────────────────────────────────────────────────────────
+const openCount = workOrders.filter((w) =>
+  ['OPEN', 'IN_PROGRESS', 'ON_HOLD'].includes(w.status),
+).length
+
+const slaBreachCount = workOrders.filter(
+  (w) => w.slaBreach && w.status !== 'COMPLETED' && w.status !== 'CANCELLED',
+).length
+
+const pmCompliancePct = Math.round(
+  pmSchedules.reduce((s, p) => s + p.compliancePct, 0) / pmSchedules.length,
+)
+
+const avgMttr = (
+  assetReliability.reduce((s, a) => s + a.mttrHours, 0) / assetReliability.length
+).toFixed(1)
+
+// ── Chart data ────────────────────────────────────────────────────────────────
+const woVolumeData = monthlyWOVolume.slice(-6).map((m) => ({
+  s: m.month,
+  n: m.corrective + m.preventive + m.inspection,
+}))
+
+const mttrChartData = mttrTrend.map((p, i) => ({ w: `W${i + 1}`, v: p.avgHours }))
+
+// ── Attention assets (open CRITICAL WO or overdue PM) ────────────────────────
+const attentionAssets = assets
+  .filter(
+    (a) =>
+      workOrders.some(
+        (w) =>
+          w.assetId === a.id &&
+          w.priority === 'CRITICAL' &&
+          w.status !== 'COMPLETED' &&
+          w.status !== 'CANCELLED',
+      ) || pmSchedules.some((s) => s.assetId === a.id && s.isOverdue),
+  )
+  .slice(0, 5)
+  .map((a) => {
+    const critWO = workOrders.find(
+      (w) =>
+        w.assetId === a.id &&
+        w.priority === 'CRITICAL' &&
+        w.status !== 'COMPLETED' &&
+        w.status !== 'CANCELLED',
+    )
+    const overduePM = pmSchedules.find((s) => s.assetId === a.id && s.isOverdue)
+    return {
+      name: a.name,
+      issue: critWO ? 'Critical WO' : 'Overdue PM',
+      days: critWO
+        ? Math.floor((Date.now() - new Date(critWO.createdAt).getTime()) / 86_400_000)
+        : Math.floor(
+            (Date.now() - new Date(overduePM?.nextDue ?? Date.now()).getTime()) / 86_400_000,
+          ),
+    }
+  })
+
+// ── Recent WOs (last 5 by createdAt desc) ────────────────────────────────────
+const recentWOs = [...workOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5)
 
 const MOCK_CONTEXT = JSON.stringify({
-  openWorkOrders: 12,
-  overdueSLA: 3,
-  pmCompliance: '87%',
-  mttr: '4.2 hrs',
-  assetsNeedingAttention: [
-    { name: 'Cooling Tower CT-004', issue: 'Overdue PM', daysSince: 112 },
-    { name: 'Conveyor CB-003', issue: 'Overdue PM', daysSince: 97 },
-    { name: 'Compressor AC-002', issue: 'In Maintenance', daysSince: 61 },
-  ],
+  openWorkOrders: openCount,
+  overdueSLA: slaBreachCount,
+  pmCompliance: `${pmCompliancePct}%`,
+  mttr: `${avgMttr} hrs`,
+  assetsNeedingAttention: attentionAssets,
 })
 
 function AiInsightCard() {
@@ -112,46 +177,37 @@ function AiInsightCard() {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          Your facility has <strong>3 SLA breaches</strong> and <strong>87% PM compliance</strong>{' '}
-          this week. Cooling Tower CT-004 is 112 days overdue — consider escalating before the next
-          quarterly audit.
+          Your facility has{' '}
+          <strong>
+            {slaBreachCount} SLA breach{slaBreachCount !== 1 ? 'es' : ''}
+          </strong>{' '}
+          and <strong>{pmCompliancePct}% PM compliance</strong> this week.{' '}
+          {attentionAssets[0] && (
+            <>
+              {attentionAssets[0].name} has an open {attentionAssets[0].issue.toLowerCase()} —
+              consider escalating.
+            </>
+          )}
         </p>
       </CardContent>
     </Card>
   )
 }
 
-const woStatusData = [
-  { s: 'Open', n: 3 },
-  { s: 'In Progress', n: 2 },
-  { s: 'Completed', n: 3 },
-]
-const mttrData = [
-  { w: 'W11', v: 5.2 },
-  { w: 'W12', v: 4.8 },
-  { w: 'W13', v: 6.1 },
-  { w: 'W14', v: 4.5 },
-  { w: 'W15', v: 3.9 },
-  { w: 'W16', v: 4.2 },
-  { w: 'W17', v: 5.0 },
-  { w: 'W18', v: 3.7 },
-  { w: 'W19', v: 4.1 },
-  { w: 'W20', v: 3.8 },
-  { w: 'W21', v: 4.4 },
-  { w: 'W22', v: 4.2 },
-]
-const attentionAssets = [
-  { name: 'Cooling Tower CT-004', issue: 'Overdue PM', days: 112 },
-  { name: 'Conveyor CB-003', issue: 'Overdue PM', days: 97 },
-  { name: 'Compressor AC-002', issue: 'In Maintenance', days: 61 },
-]
 const PRI = {
   CRITICAL: 'destructive',
   HIGH: 'destructive',
   MEDIUM: 'secondary',
   LOW: 'outline',
 } as const
-const STS = { OPEN: 'secondary', IN_PROGRESS: 'default', COMPLETED: 'outline' } as const
+const STS = {
+  OPEN: 'secondary',
+  IN_PROGRESS: 'default',
+  COMPLETED: 'outline',
+  DRAFT: 'outline',
+  ON_HOLD: 'secondary',
+  CANCELLED: 'outline',
+} as const
 
 export default function DashboardPage() {
   return (
@@ -163,7 +219,7 @@ export default function DashboardPage() {
             <CardTitle>Open WOs</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-amber-500">12</p>
+            <p className="text-3xl font-bold text-amber-500">{openCount}</p>
           </CardContent>
         </Card>
         <Card>
@@ -171,7 +227,7 @@ export default function DashboardPage() {
             <CardTitle>Overdue SLA</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-destructive">3</p>
+            <p className="text-3xl font-bold text-destructive">{slaBreachCount}</p>
           </CardContent>
         </Card>
         <Card>
@@ -179,8 +235,8 @@ export default function DashboardPage() {
             <CardTitle>PM Compliance</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-2 text-2xl font-bold text-green-600">87%</p>
-            <Progress value={87} />
+            <p className="mb-2 text-2xl font-bold text-green-600">{pmCompliancePct}%</p>
+            <Progress value={pmCompliancePct} />
           </CardContent>
         </Card>
         <Card>
@@ -188,7 +244,7 @@ export default function DashboardPage() {
             <CardTitle>MTTR</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-blue-500">4.2 hrs</p>
+            <p className="text-3xl font-bold text-blue-500">{avgMttr} hrs</p>
           </CardContent>
         </Card>
       </div>
@@ -200,7 +256,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={woStatusData}>
+              <BarChart data={woVolumeData}>
                 <XAxis dataKey="s" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
@@ -215,7 +271,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={mttrData}>
+              <LineChart data={mttrChartData}>
                 <XAxis dataKey="w" tick={{ fontSize: 12 }} />
                 <YAxis domain={[2, 8]} tick={{ fontSize: 12 }} unit=" hr" />
                 <Tooltip />
@@ -266,9 +322,9 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {workOrders.slice(0, 5).map((wo, i) => (
+                {recentWOs.map((wo) => (
                   <tr key={wo.id}>
-                    <td className="py-1.5 pr-2 font-mono text-xs">{`WO-${String(i + 1).padStart(3, '0')}`}</td>
+                    <td className="py-1.5 pr-2 font-mono text-xs">{wo.id}</td>
                     <td className="py-1.5 pr-2 max-w-[130px] truncate">{wo.title}</td>
                     <td className="py-1.5 pr-2">
                       <Badge variant={PRI[wo.priority]}>{wo.priority}</Badge>

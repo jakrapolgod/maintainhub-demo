@@ -158,10 +158,10 @@ export default function PMSchedulesPage() {
                       <span
                         className={cn(
                           'rounded px-1.5 py-0.5 text-xs font-medium',
-                          TYPE_CHIP[s.type],
+                          TYPE_CHIP[s.triggerType],
                         )}
                       >
-                        {s.type}
+                        {s.triggerType}
                       </span>
                     </td>
                     <td className={cn('px-4 py-3 text-xs', dueColor(s.nextDue, s.isOverdue))}>
@@ -283,10 +283,10 @@ export default function PMSchedulesPage() {
                       <span
                         className={cn(
                           'rounded px-1.5 py-0.5 text-xs font-medium',
-                          TYPE_CHIP[s.type],
+                          TYPE_CHIP[s.triggerType],
                         )}
                       >
-                        {s.type}
+                        {s.triggerType}
                       </span>
                     </td>
                     <td className="px-4 py-3 min-w-56">
@@ -347,7 +347,9 @@ export default function PMSchedulesPage() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Frequency</p>
-                    <p className="font-medium capitalize">{selected.frequency.toLowerCase()}</p>
+                    <p className="font-medium capitalize">
+                      {selected.frequency?.toLowerCase() ?? selected.triggerType.toLowerCase()}
+                    </p>
                   </div>
                 </div>
                 <Button

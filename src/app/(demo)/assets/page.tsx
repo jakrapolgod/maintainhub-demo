@@ -26,15 +26,17 @@ function lastWODate(assetId: string): string | null {
 }
 
 const STATUS_LABEL: Record<AssetStatus, string> = {
-  ACTIVE: 'OPERATIONAL',
-  INACTIVE: 'INACTIVE',
-  MAINTENANCE: 'IN MAINTENANCE',
+  OPERATIONAL: 'OPERATIONAL',
+  UNDER_MAINTENANCE: 'IN MAINTENANCE',
+  STANDBY: 'STANDBY',
+  DECOMMISSIONED: 'DECOMMISSIONED',
 }
 
 const STATUS_CLASS: Record<AssetStatus, string> = {
-  ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  INACTIVE: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  MAINTENANCE: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  OPERATIONAL: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  UNDER_MAINTENANCE: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  STANDBY: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  DECOMMISSIONED: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 }
 
 const CRIT_DOT: Record<CriticalityClass, string> = {

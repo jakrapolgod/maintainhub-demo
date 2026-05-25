@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { workOrders, getAssetById, type WOStatus, type WOPriority } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
 
@@ -17,14 +18,21 @@ const STS: Record<WOStatus, string> = {
   OPEN: 'bg-gray-200 text-gray-800',
   IN_PROGRESS: 'bg-blue-100 text-blue-800',
   COMPLETED: 'bg-green-100 text-green-800',
+  DRAFT: 'bg-purple-100 text-purple-800',
+  ON_HOLD: 'bg-amber-100 text-amber-800',
+  CANCELLED: 'bg-red-100 text-red-700',
 }
 const COLS: WOStatus[] = ['OPEN', 'IN_PROGRESS', 'COMPLETED']
 const FILTER_LABELS: Record<string, string> = {
   ALL: 'All',
   OPEN: 'Open',
   IN_PROGRESS: 'In Progress',
+  ON_HOLD: 'On Hold',
+  DRAFT: 'Draft',
   COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 }
+const PRI_FILTERS: Array<'ALL' | WOPriority> = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW']
 const woNum = (id: string) =>
   `WO-${String(workOrders.findIndex((w) => w.id === id) + 1).padStart(3, '0')}`
 const today = new Date().toISOString().slice(0, 10)
@@ -37,8 +45,18 @@ const Chip = ({ v, map }: { v: string; map: Record<string, string> }) => (
 export default function WorkOrdersPage() {
   const router = useRouter()
   const [filter, setFilter] = useState<'ALL' | WOStatus>('ALL')
+  const [priFilter, setPriFilter] = useState<'ALL' | WOPriority>('ALL')
+  const [search, setSearch] = useState('')
   const [kanban, setKanban] = useState(false)
-  const rows = filter === 'ALL' ? workOrders : workOrders.filter((w) => w.status === filter)
+  const rows = workOrders
+    .filter((w) => filter === 'ALL' || w.status === filter)
+    .filter((w) => priFilter === 'ALL' || w.priority === priFilter)
+    .filter(
+      (w) =>
+        !search ||
+        w.title.toLowerCase().includes(search.toLowerCase()) ||
+        w.id.toLowerCase().includes(search.toLowerCase()),
+    )
 
   return (
     <div className="space-y-4">
@@ -53,8 +71,10 @@ export default function WorkOrdersPage() {
 
       {/* Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
-          {(['ALL', 'OPEN', 'IN_PROGRESS', 'COMPLETED'] as const).map((f) => (
+        <div className="flex flex-wrap gap-1">
+          {(
+            ['ALL', 'OPEN', 'IN_PROGRESS', 'ON_HOLD', 'DRAFT', 'COMPLETED', 'CANCELLED'] as const
+          ).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -68,6 +88,28 @@ export default function WorkOrdersPage() {
               {FILTER_LABELS[f]}
             </button>
           ))}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {PRI_FILTERS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setPriFilter(p)}
+              className={cn(
+                'rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                priFilter === p
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80',
+              )}
+            >
+              {p === 'ALL' ? 'All Priority' : p}
+            </button>
+          ))}
+          <Input
+            placeholder="Search title / WO #…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 w-44 text-sm"
+          />
         </div>
         <div className="flex overflow-hidden rounded-lg border">
           {(['Table', 'Kanban'] as const).map((v, i) => (

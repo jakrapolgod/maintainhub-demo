@@ -1,42 +1,69 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { ChevronRight, ChevronDown } from "lucide-react"
-import { assets, workOrders, type CriticalityClass } from "@/lib/mock-data"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { useState } from 'react'
+import { ChevronRight, ChevronDown } from 'lucide-react'
+import { assets, workOrders, type CriticalityClass } from '@/lib/mock-data'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const openWOCount = (assetId: string) =>
-  workOrders.filter((w) => w.assetId === assetId && w.status !== "COMPLETED").length
+  workOrders.filter((w) => w.assetId === assetId && w.status !== 'COMPLETED').length
 
 const CRIT_DOT: Record<CriticalityClass, string> = {
-  A: "bg-red-500",
-  B: "bg-amber-500",
-  C: "bg-green-500",
+  A: 'bg-red-500',
+  B: 'bg-amber-500',
+  C: 'bg-green-500',
 }
 
 // ── tree data ─────────────────────────────────────────────────────────────────
-// Groups assets by site/location into a two-level hierarchy.
+// Groups assets by parentId hierarchy: SYSTEM nodes become group branches,
+// EQUIPMENT nodes become leaves under their parent SYSTEM.
 
-type AssetLeaf = { kind: "asset"; assetId: string }
-type GroupBranch = { kind: "group"; id: string; label: string; children: AssetLeaf[] }
-type RootNode = { kind: "root"; children: GroupBranch[] }
+type AssetLeaf = { kind: 'asset'; assetId: string }
+type GroupBranch = { kind: 'group'; id: string; label: string; children: AssetLeaf[] }
+type RootNode = { kind: 'root'; children: GroupBranch[] }
+
+const systemGroups: GroupBranch[] = assets
+  .filter((a) => a.nodeType === 'SYSTEM')
+  .map((a) => ({
+    kind: 'group' as const,
+    id: a.id,
+    label: a.name,
+    children: assets
+      .filter((child) => child.parentId === a.id)
+      .map((child) => ({ kind: 'asset' as const, assetId: child.id })),
+  }))
+
+const standaloneEquipment = assets.filter((a) => a.nodeType === 'EQUIPMENT' && !a.parentId)
 
 const GROUPS: GroupBranch[] = [
-  { kind: "group", id: "b1",  label: "Building 1",    children: [{ kind: "asset", assetId: "a1" }, { kind: "asset", assetId: "a2" }] },
-  { kind: "group", id: "b2",  label: "Building 2",    children: [{ kind: "asset", assetId: "a5" }] },
-  { kind: "group", id: "wha", label: "Warehouse A",   children: [{ kind: "asset", assetId: "a3" }] },
-  { kind: "group", id: "ext", label: "External",      children: [{ kind: "asset", assetId: "a4" }] },
+  ...systemGroups,
+  ...(standaloneEquipment.length > 0
+    ? [
+        {
+          kind: 'group' as const,
+          id: 'standalone',
+          label: 'Standalone',
+          children: standaloneEquipment.map((a) => ({
+            kind: 'asset' as const,
+            assetId: a.id,
+          })),
+        },
+      ]
+    : []),
 ]
 
-const ROOT: RootNode = { kind: "root", children: GROUPS }
+const ROOT: RootNode = { kind: 'root', children: GROUPS }
 
 // ── exported filter value ─────────────────────────────────────────────────────
 // null = show all, string = assetId (single) or groupId (multiple)
 
-export type TreeSelection = { type: "asset"; assetId: string } | { type: "group"; assetIds: string[] } | null
+export type TreeSelection =
+  | { type: 'asset'; assetId: string }
+  | { type: 'group'; assetIds: string[] }
+  | null
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
@@ -57,14 +84,14 @@ function AssetRow({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
         selected
-          ? "bg-primary/10 text-primary font-medium"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? 'bg-primary/10 text-primary font-medium'
+          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
       )}
     >
       {/* criticality dot */}
-      <span className={cn("size-2 shrink-0 rounded-full", CRIT_DOT[asset.criticality])} />
+      <span className={cn('size-2 shrink-0 rounded-full', CRIT_DOT[asset.criticality])} />
       {/* tag */}
       <span className="font-mono text-xs text-muted-foreground shrink-0">{asset.tag}</span>
       {/* name */}
@@ -99,7 +126,7 @@ function GroupRow({
       <button
         onClick={onToggle}
         className="rounded p-0.5 text-muted-foreground hover:bg-muted"
-        aria-label={open ? "Collapse" : "Expand"}
+        aria-label={open ? 'Collapse' : 'Expand'}
       >
         <Chevron className="size-3.5" />
       </button>
@@ -107,10 +134,8 @@ function GroupRow({
       <button
         onClick={onClick}
         className={cn(
-          "flex-1 rounded-md px-1.5 py-1 text-left text-sm font-medium transition-colors",
-          selected
-            ? "bg-primary/10 text-primary"
-            : "text-foreground hover:bg-muted"
+          'flex-1 rounded-md px-1.5 py-1 text-left text-sm font-medium transition-colors',
+          selected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
         )}
       >
         {group.label}
@@ -129,7 +154,7 @@ export interface AssetTreeProps {
 export function AssetTree({ selection, onSelect }: AssetTreeProps) {
   // all groups start expanded
   const [expanded, setExpanded] = useState<Record<string, boolean>>(
-    Object.fromEntries(GROUPS.map((g) => [g.id, true]))
+    Object.fromEntries(GROUPS.map((g) => [g.id, true])),
   )
 
   function toggle(id: string) {
@@ -138,14 +163,14 @@ export function AssetTree({ selection, onSelect }: AssetTreeProps) {
 
   function isAssetSelected(assetId: string) {
     if (!selection) return false
-    if (selection.type === "asset") return selection.assetId === assetId
-    if (selection.type === "group") return selection.assetIds.includes(assetId)
+    if (selection.type === 'asset') return selection.assetId === assetId
+    if (selection.type === 'group') return selection.assetIds.includes(assetId)
     return false
   }
 
   function isGroupSelected(group: GroupBranch) {
-    if (!selection || selection.type !== "group") return false
-    return selection.assetIds.join(",") === group.children.map((c) => c.assetId).join(",")
+    if (!selection || selection.type !== 'group') return false
+    return selection.assetIds.join(',') === group.children.map((c) => c.assetId).join(',')
   }
 
   function handleAllClick() {
@@ -153,11 +178,11 @@ export function AssetTree({ selection, onSelect }: AssetTreeProps) {
   }
 
   function handleGroupClick(group: GroupBranch) {
-    onSelect({ type: "group", assetIds: group.children.map((c) => c.assetId) })
+    onSelect({ type: 'group', assetIds: group.children.map((c) => c.assetId) })
   }
 
   function handleAssetClick(assetId: string) {
-    onSelect({ type: "asset", assetId })
+    onSelect({ type: 'asset', assetId })
   }
 
   const allSelected = selection === null
@@ -168,10 +193,8 @@ export function AssetTree({ selection, onSelect }: AssetTreeProps) {
       <button
         onClick={handleAllClick}
         className={cn(
-          "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-semibold transition-colors",
-          allSelected
-            ? "bg-primary/10 text-primary"
-            : "text-foreground hover:bg-muted"
+          'flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm font-semibold transition-colors',
+          allSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted',
         )}
       >
         All Assets
