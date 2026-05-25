@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   CalendarCheck,
   BarChart2,
+  Settings,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notification-panel'
 
@@ -75,6 +76,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <ClipboardList className="h-4 w-4" />
             Inventory
+          </Link>
+          <Link
+            href="/settings"
+            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            Settings
           </Link>
         </nav>
       </aside>
