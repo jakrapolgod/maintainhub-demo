@@ -3,6 +3,12 @@
  * DTO types are self-contained — do not import from apps/api.
  */
 import { apiFetch } from '@/lib/api'
+import {
+  getMockAssetTree,
+  getMockAssetList,
+  mockCategories,
+  mockLocations,
+} from '@/lib/mock-assets'
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
@@ -262,7 +268,9 @@ export function listAssets(filters: ListAssetsFilters = {}): Promise<AssetListRe
   filters.status?.forEach((s) => params.append('status', s))
   filters.criticality?.forEach((c) => params.append('criticality', c))
   const qs = params.toString()
-  return apiFetch<AssetListResult>(`/assets${qs ? `?${qs}` : ''}`)
+  return apiFetch<AssetListResult>(`/assets${qs ? `?${qs}` : ''}`).catch(() =>
+    getMockAssetList(filters),
+  )
 }
 
 export function getAsset(id: string): Promise<AssetDetail> {
@@ -273,7 +281,9 @@ export function getAssetTree(rootAssetId?: string, includeStats = true): Promise
   const params = new URLSearchParams()
   if (rootAssetId) params.set('rootAssetId', rootAssetId)
   params.set('includeStats', String(includeStats))
-  return apiFetch<AssetTreeResult>(`/assets/tree?${params.toString()}`)
+  return apiFetch<AssetTreeResult>(`/assets/tree?${params.toString()}`).catch(() =>
+    getMockAssetTree(rootAssetId),
+  )
 }
 
 export function searchAssets(
@@ -382,9 +392,9 @@ export function getAssetLabelUrl(id: string): string {
 }
 
 export function listCategories(): Promise<AssetCategory[]> {
-  return apiFetch('/assets/categories')
+  return apiFetch<AssetCategory[]>('/assets/categories').catch(() => mockCategories)
 }
 
 export function listLocations(): Promise<LocationStub[]> {
-  return apiFetch('/locations')
+  return apiFetch<LocationStub[]>('/locations').catch(() => mockLocations)
 }
