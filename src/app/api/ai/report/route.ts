@@ -1,11 +1,11 @@
-import { openrouter } from '@/lib/ai-client'
+import { openrouter, FREE_MODELS } from '@/lib/ai-client'
 
 export async function POST(request: Request) {
   const body = await request.json()
   const period: string = body.period ?? 'month'
 
   const res = await openrouter.chat.completions.create({
-    model: 'anthropic/claude-sonnet-4-5',
+    model: FREE_MODELS.reason,
     max_tokens: 600,
     messages: [
       {

@@ -8,3 +8,9 @@ export const openrouter = new OpenAI({
     'X-Title': 'MaintainHub Demo',
   },
 })
+
+export const FREE_MODELS = {
+  fast: 'google/gemini-2.0-flash-exp:free',
+  reason: 'deepseek/deepseek-chat:free',
+  default: 'openrouter/auto:free',
+}

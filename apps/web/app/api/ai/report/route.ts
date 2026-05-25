@@ -1,3 +1,9 @@
+const FREE_MODELS = {
+  fast: 'google/gemini-2.0-flash-exp:free',
+  reason: 'deepseek/deepseek-chat:free',
+  default: 'openrouter/auto:free',
+}
+
 export async function POST(request: Request) {
   const body = await request.json()
   const period: string = body.period ?? 'month'
@@ -11,7 +17,7 @@ export async function POST(request: Request) {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4-5',
+      model: FREE_MODELS.reason,
       max_tokens: 600,
       stream: true,
       messages: [
