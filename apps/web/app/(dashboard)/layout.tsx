@@ -1,15 +1,6 @@
-import Link from 'next/link'
 import type { Metadata } from 'next'
-import {
-  Wrench,
-  Package2,
-  ClipboardList,
-  LayoutDashboard,
-  CalendarCheck,
-  BarChart2,
-  Settings,
-} from 'lucide-react'
 import { NotificationBell } from '@/components/notification-panel'
+import { SidebarNav } from '@/components/sidebar-nav'
 
 export const metadata: Metadata = {
   title: { template: '%s | MaintainHub', default: 'Dashboard | MaintainHub' },
@@ -31,60 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-background">
       {/* ── Future: Sidebar ─────────────────────────────── */}
       <aside className="hidden w-60 shrink-0 border-r bg-card lg:flex lg:flex-col">
-        <div className="flex h-14 items-center border-b px-4">
-          <span className="font-bold text-sm">MaintainHub</span>
-        </div>
-        <nav className="flex-1 space-y-1 p-3">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-            Dashboard
-          </Link>
-          <Link
-            href="/work-orders"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-            Work Orders
-          </Link>
-          <Link
-            href="/assets"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <Package2 className="h-4 w-4 text-muted-foreground" />
-            Assets
-          </Link>
-          <Link
-            href="/pm-schedules"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-            PM Schedules
-          </Link>
-          <Link
-            href="/analytics"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <BarChart2 className="h-4 w-4 text-muted-foreground" />
-            Analytics
-          </Link>
-          <Link
-            href="/inventory"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent"
-          >
-            <ClipboardList className="h-4 w-4" />
-            Inventory
-          </Link>
-          <Link
-            href="/settings"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent"
-          >
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            Settings
-          </Link>
-        </nav>
+        <SidebarNav />
       </aside>
 
       {/* ── Main content area ─────────────────────────────── */}
