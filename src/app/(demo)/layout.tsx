@@ -1,6 +1,6 @@
-'use client'
+﻿'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -16,6 +16,7 @@ import {
   ChevronDown,
   LogOut,
   User,
+  Search,
 } from 'lucide-react'
 import { Menu } from '@base-ui/react/menu'
 
@@ -27,10 +28,11 @@ import { cn } from '@/lib/utils'
 import { DemoBanner } from '@/components/DemoBanner'
 import { Toaster } from '@/components/ui/sonner'
 import { NotificationPanel } from '@/components/NotificationPanel'
+import { GlobalSearch } from '@/components/GlobalSearch'
 import { notifications as initialNotifications } from '@/lib/mock-data'
 import type { Notification } from '@/lib/mock-data'
 
-// ─── Nav config ──────────────────────────────────────────────────────────────
+// --- Nav config --------------------------------------------------------------
 
 const navLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -58,17 +60,15 @@ const pathTitles: Record<string, string> = {
   '/settings/users': 'Settings',
 }
 
-// ─── Sidebar inner content (shared between desktop + mobile sheet) ────────────
+// --- Sidebar inner content ---------------------------------------------------
 
 function SidebarNav({ pathname }: { pathname: string }) {
   return (
     <div className="flex h-full flex-col">
-      {/* Logo */}
       <div className="flex h-14 shrink-0 items-center border-b px-5">
         <span className="text-lg font-bold tracking-tight">MaintainHub</span>
       </div>
 
-      {/* Nav links */}
       <nav className="flex-1 space-y-0.5 px-3 py-4">
         {navLinks.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(`${href}/`)
@@ -109,7 +109,6 @@ function SidebarNav({ pathname }: { pathname: string }) {
         })}
       </nav>
 
-      {/* User avatar at bottom */}
       <div className="shrink-0 border-t px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar>
@@ -125,7 +124,7 @@ function SidebarNav({ pathname }: { pathname: string }) {
   )
 }
 
-// ─── User dropdown (top-bar) ──────────────────────────────────────────────────
+// --- User dropdown -----------------------------------------------------------
 
 function UserDropdown() {
   return (
@@ -163,13 +162,27 @@ function UserDropdown() {
   )
 }
 
-// ─── Shell layout ─────────────────────────────────────────────────────────────
+// --- Shell layout ------------------------------------------------------------
 
 export default function DemoLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const pageTitle = pathTitles[pathname] ?? 'MaintainHub'
 
-  // ── Notification state ──────────────────────────────────────────────────────
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // Notification state
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs, setNotifs] = useState<Notification[]>(initialNotifications)
   const unreadCount = notifs.filter((n) => !n.isRead).length
@@ -185,16 +198,12 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
     <div className="flex h-full min-h-dvh flex-col bg-background">
       <DemoBanner />
       <div className="flex flex-1 min-h-0">
-        {/* ── Desktop sidebar (hidden on mobile) ── */}
         <aside className="hidden w-60 shrink-0 border-r lg:block">
           <SidebarNav pathname={pathname} />
         </aside>
 
-        {/* ── Right column ── */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Top bar */}
           <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
-            {/* Mobile: hamburger → sheet sidebar */}
             <Sheet>
               <SheetTrigger
                 render={
@@ -213,10 +222,32 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
               </SheetContent>
             </Sheet>
 
-            {/* Page title */}
             <h1 className="flex-1 truncate text-base font-semibold">{pageTitle}</h1>
 
-            {/* Bell notification */}
+            {/* Global search - desktop */}
+            <Button
+              variant="outline"
+              className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground w-52 justify-start px-3"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="size-4 shrink-0" />
+              <span className="flex-1 text-left">Search...</span>
+              <kbd className="pointer-events-none hidden select-none rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono font-medium text-muted-foreground sm:flex items-center gap-0.5">
+                <span>Cmd</span>K
+              </kbd>
+            </Button>
+
+            {/* Global search - mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden"
+              aria-label="Search"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="size-5" />
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
@@ -232,18 +263,16 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
               )}
             </Button>
 
-            {/* User dropdown */}
             <UserDropdown />
           </header>
 
-          {/* Page content */}
           <main className="flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
 
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       <Toaster richColors position="bottom-right" />
 
-      {/* Notification panel */}
       <NotificationPanel
         open={notifOpen}
         onOpenChange={setNotifOpen}

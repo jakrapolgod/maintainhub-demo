@@ -85,6 +85,17 @@ module.exports = {
         'import/no-extraneous-dependencies': 'off',
       },
     },
+    {
+      // The demo Next.js app lives at the repo root (src/**).
+      // Its runtime deps (react, next, lucide-react, etc.) are declared in
+      // workspace sub-packages and hoisted to the root node_modules, so they
+      // are available at build time but won't appear in the root package.json.
+      // Disable the extraneous-deps rule for these files only.
+      files: ['src/**/*.{ts,tsx}'],
+      rules: {
+        'import/no-extraneous-dependencies': 'off',
+      },
+    },
   ],
   ignorePatterns: [
     'node_modules/',
