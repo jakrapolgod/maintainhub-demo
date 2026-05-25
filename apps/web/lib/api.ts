@@ -41,11 +41,35 @@ export const tokenStore = {
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
+/** True while a token refresh is already in-flight (avoids thundering herd). */
+let _refreshPromise: Promise<string> | null = null
+
+async function _doRefresh(): Promise<string> {
+  const res = await fetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include', // sends httpOnly refresh-token cookie
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!res.ok) throw new Error('refresh_failed')
+  const data = (await res.json()) as { accessToken: string }
+  tokenStore.set(data.accessToken)
+  return data.accessToken
+}
+
+async function _refreshToken(): Promise<string> {
+  if (!_refreshPromise) {
+    _refreshPromise = _doRefresh().finally(() => {
+      _refreshPromise = null
+    })
+  }
+  return _refreshPromise
+}
+
 export async function apiFetch<T>(
   path: string,
   method: HttpMethod = 'GET',
   body?: unknown,
-  opts?: { skipAuth?: boolean },
+  opts?: { skipAuth?: boolean; _isRetry?: boolean },
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,6 +86,24 @@ export async function apiFetch<T>(
     credentials: 'include', // include httpOnly refresh token cookie
     ...(body !== undefined && { body: JSON.stringify(body) }),
   })
+
+  // ── Silent token refresh on 401 ───────────────────────────────────────────
+  if (res.status === 401 && !opts?.skipAuth && !opts?._isRetry) {
+    try {
+      await _refreshToken()
+      // Retry original request with the new token
+      return apiFetch<T>(path, method, body, { ...opts, _isRetry: true })
+    } catch {
+      // Refresh failed — clear stale token and redirect to login
+      tokenStore.clear()
+      if (typeof window !== 'undefined') {
+        // Clear the session indicator cookie so middleware also knows
+        document.cookie = 'mh_session=; path=/; SameSite=Lax; max-age=0'
+        window.location.href = '/login'
+      }
+      throw new ApiError('UNAUTHENTICATED', 'Session expired. Please log in again.', 401)
+    }
+  }
 
   if (!res.ok) {
     let payload: { code?: string; message?: string; details?: Record<string, string[]> } = {}

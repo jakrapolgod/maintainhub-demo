@@ -1,8 +1,8 @@
 {
   "framework": "nextjs",
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter @maintainhub/web build",
-  "outputDirectory": "apps/web/.next",
+  "installCommand": "pnpm install --filter maintainhub",
+  "buildCommand": "pnpm exec next build",
+  "outputDirectory": ".next",
   "env": {
     "NEXT_PUBLIC_DEMO_MODE": "true"
   }

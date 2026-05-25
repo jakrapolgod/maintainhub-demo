@@ -11,6 +11,20 @@ export const authKeys = {
   me: ['auth', 'me'] as const,
 }
 
+// ── Session cookie helpers ────────────────────────────────────────────────────
+// A lightweight, non-httpOnly cookie so Next.js middleware can detect login
+// state without being able to read the actual access token.
+
+const SESSION_COOKIE = 'mh_session'
+
+function setSessionCookie() {
+  document.cookie = `${SESSION_COOKIE}=1; path=/; SameSite=Lax; max-age=${7 * 24 * 60 * 60}`
+}
+
+function clearSessionCookie() {
+  document.cookie = `${SESSION_COOKIE}=; path=/; SameSite=Lax; max-age=0`
+}
+
 // ── Current user ──────────────────────────────────────────────────────────────
 
 /**
@@ -36,6 +50,7 @@ export function useLogin() {
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
     onSuccess: (data) => {
       tokenStore.set(data.accessToken)
+      setSessionCookie()
       queryClient.setQueryData(authKeys.me, data.user)
       toast.success(`Welcome back, ${data.user.name}!`)
       router.push('/dashboard')
@@ -57,6 +72,7 @@ export function useRegister() {
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
     onSuccess: (data) => {
       tokenStore.set(data.accessToken)
+      setSessionCookie()
       queryClient.setQueryData(authKeys.me, data.user)
       toast.success('Account created! Welcome to MaintainHub.')
       router.push('/dashboard')
@@ -79,6 +95,7 @@ export function useLogout() {
     onSettled: () => {
       // Always clear local state even if the API call fails
       tokenStore.clear()
+      clearSessionCookie()
       queryClient.clear()
       router.push('/login')
     },
