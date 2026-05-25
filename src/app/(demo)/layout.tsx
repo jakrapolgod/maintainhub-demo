@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -29,6 +29,7 @@ import { DemoBanner } from '@/components/DemoBanner'
 import { Toaster } from '@/components/ui/sonner'
 import { NotificationPanel } from '@/components/NotificationPanel'
 import { GlobalSearch } from '@/components/GlobalSearch'
+import { DemoTour } from '@/components/DemoTour'
 import { notifications as initialNotifications } from '@/lib/mock-data'
 import type { Notification } from '@/lib/mock-data'
 
@@ -198,7 +199,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
     <div className="flex h-full min-h-dvh flex-col bg-background">
       <DemoBanner />
       <div className="flex flex-1 min-h-0">
-        <aside className="hidden w-60 shrink-0 border-r lg:block">
+        <aside className="hidden w-60 shrink-0 border-r lg:block" data-tour="sidebar">
           <SidebarNav pathname={pathname} />
         </aside>
 
@@ -229,6 +230,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
               variant="outline"
               className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground w-52 justify-start px-3"
               onClick={() => setSearchOpen(true)}
+              data-tour="search"
             >
               <Search className="size-4 shrink-0" />
               <span className="flex-1 text-left">Search...</span>
@@ -254,6 +256,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
               className="relative"
               aria-label="Notifications"
               onClick={() => setNotifOpen(true)}
+              data-tour="bell"
             >
               <Bell className="size-5" />
               {unreadCount > 0 && (
@@ -271,6 +274,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+      <DemoTour />
       <Toaster richColors position="bottom-right" />
 
       <NotificationPanel

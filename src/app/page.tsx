@@ -1,23 +1,24 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
+import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
+import { TourButton } from '@/components/TourButton'
 
 const scores = [
-  { label: "WO",          value: 80, max: 99 },
-  { label: "Assets",      value: 75, max: 99 },
-  { label: "PM",          value: 72, max: 99 },
-  { label: "AI",          value: 93, max: 99 },
-  { label: "UX",          value: 95, max: 99 },
-  { label: "Integration", value: 55, max: 99 },
+  { label: 'WO', value: 80, max: 99 },
+  { label: 'Assets', value: 75, max: 99 },
+  { label: 'PM', value: 72, max: 99 },
+  { label: 'AI', value: 93, max: 99 },
+  { label: 'UX', value: 95, max: 99 },
+  { label: 'Integration', value: 55, max: 99 },
 ]
 
 const features = [
-  "Work Orders",
-  "Asset Management",
-  "Preventive Maintenance",
-  "AI Assistant",
-  "Analytics",
-  "Integration",
+  'Work Orders',
+  'Asset Management',
+  'Preventive Maintenance',
+  'AI Assistant',
+  'Analytics',
+  'Integration',
 ]
 
 export default function LandingPage() {
@@ -54,9 +55,12 @@ export default function LandingPage() {
           Phase 1 Complete ✓
         </Badge>
 
-        <Link href="/dashboard" className={buttonVariants({ size: "lg" })}>
-          Enter Demo →
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link href="/dashboard" className={buttonVariants({ size: 'lg' })}>
+            Enter Demo →
+          </Link>
+          <TourButton />
+        </div>
       </div>
 
       {/* Feature pills */}

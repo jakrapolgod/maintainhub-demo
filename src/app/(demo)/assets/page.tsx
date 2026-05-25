@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { assets, workOrders, type AssetStatus, type CriticalityClass } from "@/lib/mock-data"
-import { AssetTree, type TreeSelection } from "@/components/assets/AssetTree"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { assets, workOrders, type AssetStatus, type CriticalityClass } from '@/lib/mock-data'
+import { AssetTree, type TreeSelection } from '@/components/assets/AssetTree'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,32 +26,32 @@ function lastWODate(assetId: string): string | null {
 }
 
 const STATUS_LABEL: Record<AssetStatus, string> = {
-  ACTIVE:      "OPERATIONAL",
-  INACTIVE:    "INACTIVE",
-  MAINTENANCE: "IN MAINTENANCE",
+  ACTIVE: 'OPERATIONAL',
+  INACTIVE: 'INACTIVE',
+  MAINTENANCE: 'IN MAINTENANCE',
 }
 
 const STATUS_CLASS: Record<AssetStatus, string> = {
-  ACTIVE:      "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  INACTIVE:    "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-  MAINTENANCE: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  INACTIVE: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+  MAINTENANCE: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
 }
 
 const CRIT_DOT: Record<CriticalityClass, string> = {
-  A: "bg-red-500",
-  B: "bg-amber-500",
-  C: "bg-green-500",
+  A: 'bg-red-500',
+  B: 'bg-amber-500',
+  C: 'bg-green-500',
 }
 
 const CRIT_LABEL: Record<CriticalityClass, string> = {
-  A: "Critical",
-  B: "Major",
-  C: "Minor",
+  A: 'Critical',
+  B: 'Major',
+  C: 'Minor',
 }
 
 // ── asset card ────────────────────────────────────────────────────────────────
 
-function AssetCard({ asset }: { asset: typeof assets[number] }) {
+function AssetCard({ asset }: { asset: (typeof assets)[number] }) {
   const router = useRouter()
   const [hovered, setHovered] = useState(false)
   const lastWO = lastWODate(asset.id)
@@ -78,8 +78,8 @@ function AssetCard({ asset }: { asset: typeof assets[number] }) {
       {/* status */}
       <span
         className={cn(
-          "inline-block rounded px-1.5 py-0.5 text-xs font-medium",
-          STATUS_CLASS[asset.status]
+          'inline-block rounded px-1.5 py-0.5 text-xs font-medium',
+          STATUS_CLASS[asset.status],
         )}
       >
         {STATUS_LABEL[asset.status]}
@@ -88,8 +88,10 @@ function AssetCard({ asset }: { asset: typeof assets[number] }) {
       {/* criticality + last WO */}
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span className={cn("size-2 rounded-full", CRIT_DOT[asset.criticality])} />
-          <span>Class {asset.criticality} — {CRIT_LABEL[asset.criticality]}</span>
+          <span className={cn('size-2 rounded-full', CRIT_DOT[asset.criticality])} />
+          <span>
+            Class {asset.criticality} — {CRIT_LABEL[asset.criticality]}
+          </span>
         </div>
         {lastWO && <span>Last WO: {lastWO}</span>}
       </div>
@@ -97,10 +99,7 @@ function AssetCard({ asset }: { asset: typeof assets[number] }) {
       {/* hover "View" button */}
       {hovered && (
         <div className="absolute inset-0 flex items-end justify-end rounded-lg bg-background/60 p-3 backdrop-blur-sm">
-          <Button
-            size="sm"
-            onClick={() => router.push(`/assets/${asset.id}`)}
-          >
+          <Button size="sm" onClick={() => router.push(`/assets/${asset.id}`)}>
             View
           </Button>
         </div>
@@ -117,14 +116,14 @@ export default function AssetsPage() {
   // filter assets based on tree selection
   const filtered = (() => {
     if (!selection) return assets
-    if (selection.type === "asset") return assets.filter((a) => a.id === selection.assetId)
+    if (selection.type === 'asset') return assets.filter((a) => a.id === selection.assetId)
     return assets.filter((a) => selection.assetIds.includes(a.id))
   })()
 
   return (
     <div className="flex gap-6">
       {/* ── Left: asset tree ── */}
-      <aside className="hidden w-52 shrink-0 lg:block">
+      <aside className="hidden w-52 shrink-0 lg:block" data-tour="asset-tree">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Asset Hierarchy
         </p>
@@ -135,7 +134,7 @@ export default function AssetsPage() {
       <div className="min-w-0 flex-1">
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filtered.length} asset{filtered.length !== 1 ? "s" : ""}
+            {filtered.length} asset{filtered.length !== 1 ? 's' : ''}
           </p>
           {selection && (
             <button
