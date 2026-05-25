@@ -97,11 +97,9 @@ function AssetRow({
     >
       {/* criticality dot */}
       <span className={cn('size-2 shrink-0 rounded-full', CRIT_DOT[asset.criticality])} />
-      {/* tag */}
-      <span className="shrink-0 font-mono text-xs text-muted-foreground">{asset.tag}</span>
-      {/* name — weight shifts on hover */}
-      <span className="min-w-0 flex-1 truncate transition-all duration-150 group-hover:font-semibold">
-        {asset.name}
+      {/* tag + name — single truncating line */}
+      <span className="min-w-0 max-w-[140px] truncate text-sm transition-all duration-150 group-hover:font-semibold">
+        <span className="font-mono text-muted-foreground">{asset.tag}</span> {asset.name}
       </span>
       {/* open WO badge */}
       {wos > 0 && (
