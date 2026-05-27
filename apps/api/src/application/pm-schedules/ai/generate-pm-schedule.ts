@@ -104,18 +104,20 @@ export class GeneratePMScheduleFromAssetType {
 
     const userContent = GeneratePMScheduleFromAssetType.buildUserContent(input)
 
-    // ── Call Claude ───────────────────────────────────────────────────────────
+    // ── Call AI ───────────────────────────────────────────────────────────────
     let message
     try {
-      message = await this.ai.messages.create({
+      message = await this.ai.chat.completions.create({
         model: AI_MODEL,
         max_tokens: AI_MAX_TOKENS * 4, // PM schedules need more tokens than WO drafts
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userContent }],
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
       })
     } catch (err) {
       throw new AiError(
-        `Anthropic API error: ${err instanceof Error ? err.message : String(err)}`,
+        `AI API error: ${err instanceof Error ? err.message : String(err)}`,
         'AI_API_ERROR',
       )
     }

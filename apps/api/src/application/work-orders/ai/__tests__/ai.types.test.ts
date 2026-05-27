@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import { AiError, extractText, parseAiJson, recordUsage } from '../ai.types'
-import type { AnthropicMessage, MonitoringPort } from '../ai.types'
+import type { AIMessage, MonitoringPort } from '../ai.types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function makeMessage(text: string): AnthropicMessage {
+function makeMessage(text: string): AIMessage {
   return {
-    content: [{ type: 'text', text }],
-    usage: { input_tokens: 10, output_tokens: 20 },
+    choices: [{ message: { role: 'assistant', content: text } }],
+    usage: { prompt_tokens: 10, completion_tokens: 20 },
   }
 }
 
@@ -16,22 +16,22 @@ const simpleSchema = z.object({ value: z.string() })
 // ── extractText ───────────────────────────────────────────────────────────────
 
 describe('extractText', () => {
-  it('returns the text from the first text block', () => {
+  it('returns the text from the first choice', () => {
     expect(extractText(makeMessage('hello'))).toBe('hello')
   })
 
-  it('skips non-text blocks and finds the text block', () => {
-    const msg: AnthropicMessage = {
-      content: [{ type: 'tool_use' }, { type: 'text', text: 'found' }],
-      usage: { input_tokens: 5, output_tokens: 5 },
+  it('throws AI_PARSE_ERROR when content is null', () => {
+    const msg: AIMessage = {
+      choices: [{ message: { role: 'assistant', content: null } }],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
     }
-    expect(extractText(msg)).toBe('found')
+    expect(() => extractText(msg)).toThrow(expect.objectContaining({ code: 'AI_PARSE_ERROR' }))
   })
 
-  it('throws AI_PARSE_ERROR when no text block present', () => {
-    const msg: AnthropicMessage = {
-      content: [{ type: 'tool_use' }],
-      usage: { input_tokens: 5, output_tokens: 5 },
+  it('throws AI_PARSE_ERROR when choices is empty', () => {
+    const msg: AIMessage = {
+      choices: [],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
     }
     expect(() => extractText(msg)).toThrow(expect.objectContaining({ code: 'AI_PARSE_ERROR' }))
   })

@@ -17,8 +17,8 @@ const VALID_DRAFT = {
 
 function makeAiResponse(body: unknown) {
   return {
-    content: [{ type: 'text', text: JSON.stringify(body) }],
-    usage: { input_tokens: 150, output_tokens: 80 },
+    choices: [{ message: { role: 'assistant', content: JSON.stringify(body) } }],
+    usage: { prompt_tokens: 150, completion_tokens: 80 },
   }
 }
 
@@ -68,8 +68,10 @@ function makeDeps(
   }
 
   const ai = {
-    messages: {
-      create: jest.fn().mockResolvedValue(makeAiResponse(aiResponse)),
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue(makeAiResponse(aiResponse)),
+      },
     },
   }
 
@@ -132,10 +134,11 @@ describe('DraftWorkOrderFromNLUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('Pump P-101 is leaking badly')
+    // messages[0] = system prompt, messages[1] = user content
+    expect(call.messages[1]?.content).toContain('Pump P-101 is leaking badly')
   })
 
   it('includes asset context in the user message when assetId provided', async () => {
@@ -144,10 +147,10 @@ describe('DraftWorkOrderFromNLUseCase', () => {
 
     await uc.execute({ ...BASE_INPUT, assetId: ASSET })
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    const content = call.messages[0]?.content ?? ''
+    const content = call.messages[1]?.content ?? ''
     expect(content).toContain('Pump P-101')
     expect(content).toContain('Grundfos CR 5-8')
     expect(content).toContain('Building A')
@@ -159,10 +162,10 @@ describe('DraftWorkOrderFromNLUseCase', () => {
 
     await uc.execute({ ...BASE_INPUT, assetId: ASSET })
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('WO-001')
+    expect(call.messages[1]?.content).toContain('WO-001')
   })
 
   it('records token usage via monitoring', async () => {
@@ -181,10 +184,10 @@ describe('DraftWorkOrderFromNLUseCase', () => {
     )
   })
 
-  it('wraps Anthropic API errors in AiError AI_API_ERROR', async () => {
+  it('wraps API errors in AiError AI_API_ERROR', async () => {
     const { db, prisma, monitoring } = makeDeps()
     const failingAi = {
-      messages: { create: jest.fn().mockRejectedValue(new Error('rate limited')) },
+      chat: { completions: { create: jest.fn().mockRejectedValue(new Error('rate limited')) } },
     }
     const uc = new DraftWorkOrderFromNLUseCase(db as never, prisma as never, failingAi, monitoring)
 
@@ -194,11 +197,13 @@ describe('DraftWorkOrderFromNLUseCase', () => {
   it('throws AI_VALIDATION_ERROR when AI returns wrong schema', async () => {
     const { db, prisma, monitoring } = makeDeps()
     const badAi = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: '{"unexpected":"field"}' }],
-          usage: { input_tokens: 10, output_tokens: 5 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: '{"unexpected":"field"}' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5 },
+          }),
+        },
       },
     }
     const uc = new DraftWorkOrderFromNLUseCase(db as never, prisma as never, badAi, monitoring)
@@ -210,11 +215,13 @@ describe('DraftWorkOrderFromNLUseCase', () => {
     const fenced = `\`\`\`json\n${JSON.stringify(VALID_DRAFT)}\n\`\`\``
     const { db, prisma, monitoring } = makeDeps()
     const fencedAi = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: fenced }],
-          usage: { input_tokens: 10, output_tokens: 20 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: fenced } }],
+            usage: { prompt_tokens: 10, completion_tokens: 20 },
+          }),
+        },
       },
     }
     const uc = new DraftWorkOrderFromNLUseCase(db as never, prisma as never, fencedAi, monitoring)
@@ -227,11 +234,13 @@ describe('DraftWorkOrderFromNLUseCase', () => {
     const minimal = { title: 'T', description: 'D', type: 'INSPECTION', priority: 'LOW' }
     const { db, prisma, monitoring } = makeDeps({ aiResponse: minimal })
     const minimalAi = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: JSON.stringify(minimal) }],
-          usage: { input_tokens: 10, output_tokens: 20 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: JSON.stringify(minimal) } }],
+            usage: { prompt_tokens: 10, completion_tokens: 20 },
+          }),
+        },
       },
     }
     const uc = new DraftWorkOrderFromNLUseCase(db as never, prisma as never, minimalAi, monitoring)

@@ -72,11 +72,13 @@ function makeDeps(
   }
 
   const ai = {
-    messages: {
-      create: jest.fn().mockResolvedValue({
-        content: [{ type: 'text', text: procedure }],
-        usage: { input_tokens: 300, output_tokens: 400 },
-      }),
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [{ message: { role: 'assistant', content: procedure } }],
+          usage: { prompt_tokens: 300, completion_tokens: 400 },
+        }),
+      },
     },
   }
 
@@ -101,7 +103,7 @@ describe('GenerateWorkInstructionsUseCase', () => {
     expect(result.procedure).toContain('## ⚠️ Safety Warnings')
   })
 
-  it('returns the raw markdown procedure from Claude', async () => {
+  it('returns the raw markdown procedure from the AI', async () => {
     const { prisma, ai, monitoring } = makeDeps()
     const uc = new GenerateWorkInstructionsUseCase(prisma as never, ai, monitoring)
 
@@ -123,10 +125,11 @@ describe('GenerateWorkInstructionsUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    const content = call.messages[0]?.content ?? ''
+    // messages[0] = system prompt, messages[1] = user content
+    const content = call.messages[1]?.content ?? ''
     expect(content).toContain('Replace mechanical seal')
     expect(content).toContain('Pump P-101')
     expect(content).toContain('Grundfos CR 5-8')
@@ -138,10 +141,10 @@ describe('GenerateWorkInstructionsUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('GF2024-001')
+    expect(call.messages[1]?.content).toContain('GF2024-001')
   })
 
   it('includes team size hint when multiple assignees', async () => {
@@ -150,10 +153,10 @@ describe('GenerateWorkInstructionsUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('2 technicians')
+    expect(call.messages[1]?.content).toContain('2 technicians')
   })
 
   it('includes required skills when PM schedule is present', async () => {
@@ -181,10 +184,10 @@ describe('GenerateWorkInstructionsUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('mechanical-technician')
+    expect(call.messages[1]?.content).toContain('mechanical-technician')
   })
 
   it('includes failure code when present on the WO', async () => {
@@ -196,10 +199,10 @@ describe('GenerateWorkInstructionsUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('MECH-003')
+    expect(call.messages[1]?.content).toContain('MECH-003')
   })
 
   it('records token usage', async () => {
@@ -216,10 +219,10 @@ describe('GenerateWorkInstructionsUseCase', () => {
     )
   })
 
-  it('wraps Anthropic API errors in AI_API_ERROR', async () => {
+  it('wraps API errors in AI_API_ERROR', async () => {
     const { prisma, monitoring } = makeDeps()
     const badAi = {
-      messages: { create: jest.fn().mockRejectedValue(new Error('network error')) },
+      chat: { completions: { create: jest.fn().mockRejectedValue(new Error('network error')) } },
     }
     const uc = new GenerateWorkInstructionsUseCase(prisma as never, badAi, monitoring)
 
@@ -229,11 +232,13 @@ describe('GenerateWorkInstructionsUseCase', () => {
   it('trims whitespace from the returned procedure', async () => {
     const { prisma, monitoring } = makeDeps()
     const paddedAi = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: `  \n${PROCEDURE_MD}\n  ` }],
-          usage: { input_tokens: 10, output_tokens: 20 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: `  \n${PROCEDURE_MD}\n  ` } }],
+            usage: { prompt_tokens: 10, completion_tokens: 20 },
+          }),
+        },
       },
     }
     const uc = new GenerateWorkInstructionsUseCase(prisma as never, paddedAi, monitoring)

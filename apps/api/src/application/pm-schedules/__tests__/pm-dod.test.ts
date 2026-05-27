@@ -454,11 +454,13 @@ describe('DoD #8 — AI suggest: ≥2 schedules with tasks for "centrifugal pump
 
   it('returns ≥2 schedules each with ≥1 task', async () => {
     const ai = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: PUMP_AI_RESPONSE }],
-          usage: { input_tokens: 200, output_tokens: 500 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: PUMP_AI_RESPONSE } }],
+            usage: { prompt_tokens: 200, completion_tokens: 500 },
+          }),
+        },
       },
     }
 
@@ -477,11 +479,13 @@ describe('DoD #8 — AI suggest: ≥2 schedules with tasks for "centrifugal pump
 
   it('first schedule is monthly lubrication with isCritical task', async () => {
     const ai = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: PUMP_AI_RESPONSE }],
-          usage: { input_tokens: 200, output_tokens: 500 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: PUMP_AI_RESPONSE } }],
+            usage: { prompt_tokens: 200, completion_tokens: 500 },
+          }),
+        },
       },
     }
 
@@ -496,11 +500,13 @@ describe('DoD #8 — AI suggest: ≥2 schedules with tasks for "centrifugal pump
 
   it('includes meter reading tasks with units', async () => {
     const ai = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [{ type: 'text', text: PUMP_AI_RESPONSE }],
-          usage: { input_tokens: 200, output_tokens: 500 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { role: 'assistant', content: PUMP_AI_RESPONSE } }],
+            usage: { prompt_tokens: 200, completion_tokens: 500 },
+          }),
+        },
       },
     }
 

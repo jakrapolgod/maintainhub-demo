@@ -172,7 +172,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
             },
           },
@@ -217,7 +217,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -259,7 +259,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           403: { description: 'Forbidden', ...errorBody },
         },
@@ -294,7 +294,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -330,7 +330,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -359,7 +359,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
         security: [{ bearerAuth: [] }],
         params: assetIdParam,
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           404: { description: 'Not found', ...errorBody },
         },
@@ -401,7 +401,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
             model: { type: 'string', maxLength: 200 },
             serialNumber: { type: 'string', maxLength: 100 },
             warrantyExpiry: { type: 'string', format: 'date-time' },
-            customFields: { type: 'object' },
+            customFields: { type: 'object', additionalProperties: true },
           },
           additionalProperties: false,
         },
@@ -475,7 +475,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
             model: { type: 'string' },
             serialNumber: { type: 'string' },
             warrantyExpiry: { type: 'string', nullable: true },
-            customFields: { type: 'object' },
+            customFields: { type: 'object', additionalProperties: true },
           },
           additionalProperties: false,
         },

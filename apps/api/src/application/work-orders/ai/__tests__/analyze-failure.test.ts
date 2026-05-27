@@ -67,11 +67,13 @@ function makeDeps(
   }
 
   const ai = {
-    messages: {
-      create: jest.fn().mockResolvedValue({
-        content: [{ type: 'text', text: JSON.stringify(aiResponse) }],
-        usage: { input_tokens: 200, output_tokens: 100 },
-      }),
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [{ message: { role: 'assistant', content: JSON.stringify(aiResponse) } }],
+          usage: { prompt_tokens: 200, completion_tokens: 100 },
+        }),
+      },
     },
   }
 
@@ -114,10 +116,11 @@ describe('AnalyzeFailureUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    const content = call.messages[0]?.content ?? ''
+    // messages[0] = system prompt, messages[1] = user content
+    const content = call.messages[1]?.content ?? ''
     expect(content).toContain('Oil leaking from shaft area')
     expect(content).toContain('Pump leaking')
   })
@@ -128,11 +131,11 @@ describe('AnalyzeFailureUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('WO-023')
-    expect(call.messages[0]?.content).toContain('Replaced lip seal')
+    expect(call.messages[1]?.content).toContain('WO-023')
+    expect(call.messages[1]?.content).toContain('Replaced lip seal')
   })
 
   it('includes "no history" note when asset has no prior WOs', async () => {
@@ -141,10 +144,10 @@ describe('AnalyzeFailureUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('none recorded')
+    expect(call.messages[1]?.content).toContain('none recorded')
   })
 
   it('records token usage', async () => {
@@ -158,10 +161,10 @@ describe('AnalyzeFailureUseCase', () => {
     )
   })
 
-  it('wraps Anthropic errors in AI_API_ERROR', async () => {
+  it('wraps API errors in AI_API_ERROR', async () => {
     const { prisma, monitoring } = makeDeps()
     const badAi = {
-      messages: { create: jest.fn().mockRejectedValue(new Error('overloaded')) },
+      chat: { completions: { create: jest.fn().mockRejectedValue(new Error('overloaded')) } },
     }
     const uc = new AnalyzeFailureUseCase(prisma as never, badAi, monitoring)
 
@@ -171,16 +174,20 @@ describe('AnalyzeFailureUseCase', () => {
   it('throws AI_VALIDATION_ERROR when urgency is invalid enum value', async () => {
     const { prisma, monitoring } = makeDeps()
     const badAi = {
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({ ...VALID_ANALYSIS, urgency: 'ASAP' }),
-            },
-          ],
-          usage: { input_tokens: 10, output_tokens: 5 },
-        }),
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [
+              {
+                message: {
+                  role: 'assistant',
+                  content: JSON.stringify({ ...VALID_ANALYSIS, urgency: 'ASAP' }),
+                },
+              },
+            ],
+            usage: { prompt_tokens: 10, completion_tokens: 5 },
+          }),
+        },
       },
     }
     const uc = new AnalyzeFailureUseCase(prisma as never, badAi, monitoring)
@@ -198,10 +205,10 @@ describe('AnalyzeFailureUseCase', () => {
 
     await uc.execute(BASE_INPUT)
 
-    const call = (ai.messages.create as jest.Mock).mock.calls[0]?.[0] as {
+    const call = (ai.chat.completions.create as jest.Mock).mock.calls[0]?.[0] as {
       messages: Array<{ content: string }>
     }
-    expect(call.messages[0]?.content).toContain('MECH-003')
+    expect(call.messages[1]?.content).toContain('MECH-003')
   })
 
   it('fetches history scoped to the same asset, excluding the current WO', async () => {

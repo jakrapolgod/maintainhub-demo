@@ -3,22 +3,26 @@ import { DomainException } from '../../errors/domain.exception.js'
 /**
  * AssetNumber — human-readable, tenant-unique asset identifier.
  *
- * Format:  AST-{NNNNNN}  (6 zero-padded decimal digits)
+ * Auto-generated format:  AST-{NNNNNN}  (6 zero-padded decimal digits)
  * Example: AST-000001, AST-042099
  *
- * The number component must be a positive integer from 1 to 999 999.
- * Numbers are assigned by the repository (`AssetRepository.nextAssetNumber`)
- * in monotonically increasing order per tenant.
+ * Custom / legacy formats (e.g. "P-101", "AC-001") are also accepted so that
+ * imported or manually-assigned numbers are not rejected.
+ * Constraints: 1–50 chars, alphanumeric with hyphens/underscores/dots/spaces.
  */
 export class AssetNumber {
   readonly value: string
 
-  private static readonly FORMAT_REGEX = /^AST-\d{6}$/
+  /** Regex for auto-generated sequential numbers (used by fromSequence). */
+  private static readonly SEQUENTIAL_REGEX = /^AST-\d{6}$/
+
+  /** Permissive regex for any user-supplied or imported asset number. */
+  private static readonly VALID_REGEX = /^[A-Za-z0-9][A-Za-z0-9\-_./ ]{0,49}$/
 
   constructor(value: string) {
-    if (!AssetNumber.FORMAT_REGEX.test(value)) {
+    if (!value || !AssetNumber.VALID_REGEX.test(value)) {
       throw new DomainException(
-        `"${value}" is not a valid AssetNumber — expected format AST-NNNNNN (e.g. AST-000001)`,
+        `"${value}" is not a valid AssetNumber — must be 1–50 alphanumeric characters (hyphens, dots, underscores allowed)`,
         'INVALID_ASSET_NUMBER',
       )
     }
@@ -37,8 +41,9 @@ export class AssetNumber {
     return new AssetNumber(`AST-${String(n).padStart(6, '0')}`)
   }
 
-  /** Extract the integer sequence component. */
+  /** Extract the integer sequence component. Only valid for AST-NNNNNN format; returns NaN otherwise. */
   get sequence(): number {
+    if (!AssetNumber.SEQUENTIAL_REGEX.test(this.value)) return NaN
     return parseInt(this.value.slice(4), 10)
   }
 

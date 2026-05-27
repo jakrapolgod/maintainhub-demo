@@ -34,18 +34,18 @@ import type { OASSchema } from './route-helpers.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const METRICS_TTL_SECONDS = 300   // 5 minutes
+const METRICS_TTL_SECONDS = 300 // 5 minutes
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
 const metricsQuerySchema = z.object({
   dateFrom: z.string().optional(),
-  dateTo:   z.string().optional(),
-  groupBy:  z.enum(['day', 'week', 'month']).default('day'),
+  dateTo: z.string().optional(),
+  groupBy: z.enum(['day', 'week', 'month']).default('day'),
 })
 
 const calendarQuerySchema = z.object({
-  year:  z.coerce.number().int().min(2000).max(2100),
+  year: z.coerce.number().int().min(2000).max(2100),
   month: z.coerce.number().int().min(1).max(12),
 })
 
@@ -55,10 +55,7 @@ function metricsCacheKey(tenantId: string, params: string): string {
   return `wo:metrics:${tenantId}:${params}`
 }
 
-async function metricsGet<T>(
-  redis: Redis,
-  key: string,
-): Promise<T | null> {
+async function metricsGet<T>(redis: Redis, key: string): Promise<T | null> {
   try {
     const raw = await redis.get(key)
     return raw !== null ? (JSON.parse(raw) as T) : null
@@ -67,11 +64,7 @@ async function metricsGet<T>(
   }
 }
 
-async function metricsSet(
-  redis: Redis,
-  key: string,
-  value: unknown,
-): Promise<void> {
+async function metricsSet(redis: Redis, key: string, value: unknown): Promise<void> {
   try {
     await redis.set(key, JSON.stringify(value), 'EX', METRICS_TTL_SECONDS)
   } catch {
@@ -84,7 +77,7 @@ async function metricsSet(
 interface TrendRow {
   period: Date
   status: string
-  count:  number
+  count: number
 }
 
 /**
@@ -100,11 +93,13 @@ async function fetchTrend(
   groupBy: 'day' | 'week' | 'month',
 ): Promise<TrendRow[]> {
   const trunc = Prisma.raw(groupBy)
-  const rows  = await prisma.$queryRaw<Array<{
-    period: Date
-    status: string
-    count:  bigint
-  }>>`
+  const rows = await prisma.$queryRaw<
+    Array<{
+      period: Date
+      status: string
+      count: bigint
+    }>
+  >`
     SELECT
       DATE_TRUNC(${trunc}, created_at) AS period,
       status,
@@ -120,22 +115,21 @@ async function fetchTrend(
   return rows.map((r) => ({
     period: r.period,
     status: r.status,
-    count:  Number(r.count),
+    count: Number(r.count),
   }))
 }
 
 function buildQryCtx(request: FastifyRequest): QueryContext {
   return {
     executingUserId: request.user.sub,
-    tenantId:        request.user.tid,
-    userRole:        request.user.role,
+    tenantId: request.user.tid,
+    userRole: request.user.role,
   }
 }
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ── GET /metrics ───────────────────────────────────────────────────────────
   // Static path — registered before dynamic /:id routes.
   fastify.get(
@@ -143,57 +137,68 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         description: 'Aggregated work-order KPIs for the dashboard. Cached in Redis for 5 minutes.',
-        tags:     ['work-orders', 'analytics'],
+        tags: ['work-orders', 'analytics'],
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
           properties: {
-            dateFrom: { type: 'string', format: 'date-time', description: 'Range start (ISO 8601)' },
-            dateTo:   { type: 'string', format: 'date-time', description: 'Range end (ISO 8601)' },
-            groupBy:  { type: 'string', enum: ['day', 'week', 'month'], default: 'day' },
+            dateFrom: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Range start (ISO 8601)',
+            },
+            dateTo: { type: 'string', format: 'date-time', description: 'Range end (ISO 8601)' },
+            groupBy: { type: 'string', enum: ['day', 'week', 'month'], default: 'day' },
           },
         },
         response: {
-          200: { type: 'object',
+          200: {
+            type: 'object',
             properties: {
-              byStatus:           { type: 'object' },
-              byPriority:         { type: 'object' },
-              overdueCount:       { type: 'integer' },
+              byStatus: { type: 'object', additionalProperties: true },
+              byPriority: { type: 'object', additionalProperties: true },
+              overdueCount: { type: 'integer' },
               avgCompletionHours: { type: 'number', nullable: true },
-              mttr:               { type: 'number', nullable: true, description: 'Mean Time To Repair (hours)' },
-              totalCost:          { type: 'number' },
-              trend:              { type: 'array', items: { type: 'object' } },
+              mttr: { type: 'number', nullable: true, description: 'Mean Time To Repair (hours)' },
+              totalCost: { type: 'number' },
+              trend: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           401: { description: 'Unauthorised', ...errorBody },
-          403: { description: 'Forbidden',    ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
         },
       } as OASSchema,
       // 'audit-log:read' allows ADMIN + MANAGER — matches the "MANAGER, ADMIN" requirement
       preHandler: requirePermission('audit-log', 'read'),
     },
     async (request, reply) => {
-      const q       = metricsQuerySchema.parse(request.query)
-      const asOf    = q.dateTo   ? new Date(q.dateTo)   : new Date()
-      const dateFrom = q.dateFrom ? new Date(q.dateFrom) : new Date(Date.now() - 30 * 24 * 3_600_000)
+      const q = metricsQuerySchema.parse(request.query)
+      const asOf = q.dateTo ? new Date(q.dateTo) : new Date()
+      const dateFrom = q.dateFrom
+        ? new Date(q.dateFrom)
+        : new Date(Date.now() - 30 * 24 * 3_600_000)
 
       // ── Cache check ────────────────────────────────────────────────────────
-      const cacheParams = JSON.stringify({ df: dateFrom.toISOString(), dt: asOf.toISOString(), g: q.groupBy })
-      const cacheKey    = metricsCacheKey(request.user.tid, cacheParams)
-      const cached      = await metricsGet(request.server.redis, cacheKey)
+      const cacheParams = JSON.stringify({
+        df: dateFrom.toISOString(),
+        dt: asOf.toISOString(),
+        g: q.groupBy,
+      })
+      const cacheKey = metricsCacheKey(request.user.tid, cacheParams)
+      const cached = await metricsGet(request.server.redis, cacheKey)
       if (cached !== null) return reply.send(cached)
 
       // ── Base metrics (status/priority counts, overdue) ─────────────────────
       const baseHandler = new GetWorkOrderMetricsHandler(request.db, request.server.prisma)
-      const base        = await baseHandler.handle({ asOf }, buildQryCtx(request))
+      const base = await baseHandler.handle({ asOf }, buildQryCtx(request))
 
       // ── Date-range cost + MTTR ─────────────────────────────────────────────
       const completedRows = await request.server.prisma.workOrder.findMany({
         where: {
-          tenantId:    request.user.tid,
-          status:      'COMPLETED',
+          tenantId: request.user.tid,
+          status: 'COMPLETED',
           completedAt: { gte: dateFrom, lte: asOf },
-          deletedAt:   null,
+          deletedAt: null,
         },
         select: { createdAt: true, completedAt: true, totalLaborCost: true, totalPartsCost: true },
       })
@@ -203,18 +208,19 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
       let completedWithDate = 0
 
       for (const r of completedRows) {
-        const labor  = r.totalLaborCost !== null ? Number(r.totalLaborCost) : 0
-        const parts  = r.totalPartsCost !== null ? Number(r.totalPartsCost) : 0
-        totalCost   += labor + parts
+        const labor = r.totalLaborCost !== null ? Number(r.totalLaborCost) : 0
+        const parts = r.totalPartsCost !== null ? Number(r.totalPartsCost) : 0
+        totalCost += labor + parts
 
         if (r.completedAt) {
-          totalHours       += (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000
+          totalHours += (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000
           completedWithDate += 1
         }
       }
 
-      const mttr               = completedWithDate > 0 ? Math.round((totalHours / completedWithDate) * 100) / 100 : null
-      const avgCompletionHours = mttr   // same metric, two names
+      const mttr =
+        completedWithDate > 0 ? Math.round((totalHours / completedWithDate) * 100) / 100 : null
+      const avgCompletionHours = mttr // same metric, two names
 
       // ── Trend (groupBy) ────────────────────────────────────────────────────
       const trendRows = await fetchTrend(
@@ -228,17 +234,17 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
       const trend = trendRows.map((r) => ({
         period: r.period.toISOString().slice(0, 10),
         status: r.status,
-        count:  r.count,
+        count: r.count,
       }))
 
       // ── Compose result ─────────────────────────────────────────────────────
       const result = {
-        byStatus:           base.byStatus,
-        byPriority:         base.byPriority,
-        overdueCount:       base.overdueCount,
+        byStatus: base.byStatus,
+        byPriority: base.byPriority,
+        overdueCount: base.overdueCount,
         avgCompletionHours,
         mttr,
-        totalCost:          Math.round(totalCost * 100) / 100,
+        totalCost: Math.round(totalCost * 100) / 100,
         trend,
       }
 
@@ -252,27 +258,34 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
     '/calendar',
     {
       schema: {
-        description: 'Work orders and PM due dates grouped by calendar day for the given year/month.',
-        tags:     ['work-orders', 'analytics'],
+        description:
+          'Work orders and PM due dates grouped by calendar day for the given year/month.',
+        tags: ['work-orders', 'analytics'],
         security: [{ bearerAuth: [] }],
         querystring: {
           type: 'object',
           required: ['year', 'month'],
           properties: {
-            year:  { type: 'integer', minimum: 2000, maximum: 2100, description: 'Calendar year' },
-            month: { type: 'integer', minimum: 1,    maximum: 12,   description: 'Calendar month (1–12)' },
+            year: { type: 'integer', minimum: 2000, maximum: 2100, description: 'Calendar year' },
+            month: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 12,
+              description: 'Calendar month (1–12)',
+            },
           },
         },
         response: {
-          200: { type: 'object',
+          200: {
+            type: 'object',
             properties: {
               from: { type: 'string' },
-              to:   { type: 'string' },
-              days: { type: 'array', items: { type: 'object' } },
+              to: { type: 'string' },
+              days: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           400: { description: 'Validation error', ...errorBody },
-          401: { description: 'Unauthorised',      ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
@@ -282,11 +295,11 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Build YYYY-MM-DD range for the requested month
       const from = `${String(year)}-${String(month).padStart(2, '0')}-01`
-      const lastDay = new Date(year, month, 0).getDate()   // day 0 of next month = last day of this month
-      const to      = `${String(year)}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+      const lastDay = new Date(year, month, 0).getDate() // day 0 of next month = last day of this month
+      const to = `${String(year)}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
       const handler = new GetWorkOrderCalendarHandler(request.db, request.server.prisma)
-      const result  = await handler.handle({ from, to }, buildQryCtx(request))
+      const result = await handler.handle({ from, to }, buildQryCtx(request))
 
       return reply.send(result)
     },

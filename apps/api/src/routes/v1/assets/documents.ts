@@ -59,7 +59,7 @@ const documentRoutes: FastifyPluginAsync = async (fastify) => {
         security: [{ bearerAuth: [] }],
         params: assetIdParam,
         response: {
-          200: { type: 'array', items: { type: 'object' } },
+          200: { type: 'array', items: { type: 'object', additionalProperties: true } },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,

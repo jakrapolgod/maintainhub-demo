@@ -26,7 +26,6 @@
     "db:reset": "prisma migrate reset"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.96.0",
     "@fastify/cookie": "^9.0.0",
     "@fastify/cors": "^9.0.0",
     "@fastify/helmet": "^11.0.0",
@@ -49,6 +48,7 @@
     "meilisearch": "^0.58.0",
     "minio": "^8.0.7",
     "nodemailer": "^6.0.0",
+    "openai": "^4.104.0",
     "qrcode": "^1.5.4",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.3",

@@ -42,8 +42,8 @@ function plannedTriggersPerYear(
   calendarRule: { frequency: string; interval: number } | null,
 ): number {
   if (triggerType !== 'CALENDAR' || calendarRule === null) return 0
-  const { frequency, interval } = calendarRule
-  if (interval <= 0) return 0
+  const { frequency, interval = 1 } = calendarRule
+  if (!interval || Number.isNaN(interval) || interval <= 0) return 0
   switch (frequency) {
     case 'daily':
       return Math.round(365 / interval)

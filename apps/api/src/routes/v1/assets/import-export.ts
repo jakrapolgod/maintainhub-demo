@@ -166,7 +166,7 @@ const importExportRoutes: FastifyPluginAsync = async (fastify) => {
             type: 'object',
             properties: {
               success: { type: 'integer' },
-              failed: { type: 'array', items: { type: 'object' } },
+              failed: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           400: { description: 'No file / invalid format', ...errorBody },

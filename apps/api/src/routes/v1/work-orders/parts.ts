@@ -14,7 +14,7 @@ import type { OASSchema } from './route-helpers.js'
 // ── Zod schema ────────────────────────────────────────────────────────────────
 
 const partsBodySchema = z.object({
-  partId:   z.string().cuid('partId must be a valid CUID'),
+  partId: z.string().cuid('partId must be a valid CUID'),
   quantity: z.number().int('Quantity must be a whole number').positive().max(10_000),
   /** Optional cost override — defaults to the part's current unit cost. */
   unitCost: z.number().nonnegative().max(9_999_999).optional(),
@@ -25,49 +25,51 @@ type IdParam = { Params: { id: string } }
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 const partsRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ── POST /:id/parts ────────────────────────────────────────────────────────
   fastify.post<IdParam>(
     '/:id/parts',
     {
       schema: {
-        description: 'Record spare-part consumption. Deducts from on-hand stock and updates the WO parts total.',
-        tags:     ['work-orders'],
+        description:
+          'Record spare-part consumption. Deducts from on-hand stock and updates the WO parts total.',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['partId', 'quantity'],
           properties: {
-            partId:   { type: 'string', description: 'Part CUID' },
+            partId: { type: 'string', description: 'Part CUID' },
             quantity: { type: 'integer', minimum: 1, maximum: 10000 },
-            unitCost: { type: 'number', minimum: 0, description: 'Override unit cost (defaults to catalog price)' },
+            unitCost: {
+              type: 'number',
+              minimum: 0,
+              description: 'Override unit cost (defaults to catalog price)',
+            },
           },
           additionalProperties: false,
         },
         response: {
-          201: { type: 'object',
-            properties: { id: { type: 'string' } },
-          },
-          401: { description: 'Unauthorised',          ...errorBody },
-          403: { description: 'Forbidden',             ...errorBody },
-          404: { description: 'WO or part not found',  ...errorBody },
-          422: { description: 'Business rule error',   ...errorBody },
+          201: { type: 'object', properties: { id: { type: 'string' } } },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'WO or part not found', ...errorBody },
+          422: { description: 'Business rule error', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'add-part'),
     },
     async (request, reply) => {
-      const body    = partsBodySchema.parse(request.body)
-      const ctx     = buildCmdCtx(request)
-      const woRepo  = makeWoRepo(request)
+      const body = partsBodySchema.parse(request.body)
+      const ctx = buildCmdCtx(request)
+      const woRepo = makeWoRepo(request)
       const handler = new UsePartHandler(request.db, request.server.prisma, woRepo)
 
       const usageId = await handler.handle(
         {
           workOrderId: request.params.id,
-          partId:      body.partId,
-          quantity:    body.quantity,
+          partId: body.partId,
+          quantity: body.quantity,
           ...(body.unitCost !== undefined && { unitCostOverride: body.unitCost }),
         },
         ctx,
@@ -83,22 +85,20 @@ const partsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         description: 'List all part usages for a work order, most recent first.',
-        tags:     ['work-orders'],
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         response: {
-          200: { type: 'array',
-            items: { type: 'object' },
-          },
+          200: { type: 'array', items: { type: 'object', additionalProperties: true } },
           401: { description: 'Unauthorised', ...errorBody },
-          404: { description: 'Not found',    ...errorBody },
+          404: { description: 'Not found', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
       const usages = await request.db.partUsage.findMany({
-        where:   { workOrderId: request.params.id },
+        where: { workOrderId: request.params.id },
         orderBy: { usedAt: 'desc' },
         include: {
           part: { select: { id: true, partNumber: true, name: true } },
@@ -106,14 +106,14 @@ const partsRoutes: FastifyPluginAsync = async (fastify) => {
       })
 
       const items = usages.map((u) => ({
-        id:         u.id,
-        partId:     u.partId,
+        id: u.id,
+        partId: u.partId,
         partNumber: u.part.partNumber,
-        partName:   u.part.name,
-        quantity:   u.quantity,
-        unitCost:   Number(u.unitCost),
-        totalCost:  Number(u.totalCost),
-        usedAt:     u.usedAt.toISOString(),
+        partName: u.part.name,
+        quantity: u.quantity,
+        unitCost: Number(u.unitCost),
+        totalCost: Number(u.totalCost),
+        usedAt: u.usedAt.toISOString(),
       }))
 
       return reply.send(items)

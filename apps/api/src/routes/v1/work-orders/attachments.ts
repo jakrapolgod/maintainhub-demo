@@ -27,12 +27,12 @@ import type { OASSchema } from './route-helpers.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const MAX_FILE_BYTES      = 20 * 1024 * 1024       // 20 MB
-const PRESIGN_TTL_SECONDS = 3_600                  // 1 hour
-const STORAGE_PREFIX      = 'attachments'
+const MAX_FILE_BYTES = 20 * 1024 * 1024 // 20 MB
+const PRESIGN_TTL_SECONDS = 3_600 // 1 hour
+const STORAGE_PREFIX = 'attachments'
 
-const ALLOWED_MIME_PREFIXES  = ['image/']
-const ALLOWED_MIME_EXACT     = new Set([
+const ALLOWED_MIME_PREFIXES = ['image/']
+const ALLOWED_MIME_EXACT = new Set([
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -51,9 +51,9 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
   // Register multipart plugin scoped to this sub-plugin only
   await fastify.register(multipart, {
     limits: {
-      fileSize:  MAX_FILE_BYTES,
-      files:     1,            // one file per request
-      fieldSize: 0,            // no text fields
+      fileSize: MAX_FILE_BYTES,
+      files: 1, // one file per request
+      fieldSize: 0, // no text fields
     },
   })
 
@@ -62,10 +62,11 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/attachments',
     {
       schema: {
-        description: 'Upload a file attachment (image, PDF, or Word doc, max 20 MB) to a work order.',
-        tags:     ['work-orders'],
+        description:
+          'Upload a file attachment (image, PDF, or Word doc, max 20 MB) to a work order.',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         // Body is multipart/form-data — JSON Schema describes the form fields
         body: {
           type: 'object',
@@ -74,34 +75,35 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          201: { type: 'object',
+          201: {
+            type: 'object',
             properties: {
-              id:          { type: 'string' },
-              fileName:    { type: 'string' },
-              fileSize:    { type: 'integer' },
-              mimeType:    { type: 'string' },
-              storageKey:  { type: 'string' },
+              id: { type: 'string' },
+              fileName: { type: 'string' },
+              fileSize: { type: 'integer' },
+              mimeType: { type: 'string' },
+              storageKey: { type: 'string' },
               downloadUrl: { type: 'string', description: 'Presigned GET URL (valid 1 hour)' },
-              uploadedAt:  { type: 'string' },
+              uploadedAt: { type: 'string' },
             },
           },
           400: { description: 'No file / invalid MIME type', ...errorBody },
-          401: { description: 'Unauthorised',                ...errorBody },
-          403: { description: 'Forbidden',                   ...errorBody },
-          404: { description: 'WO not found',                ...errorBody },
-          413: { description: 'File exceeds 20 MB limit',    ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'WO not found', ...errorBody },
+          413: { description: 'File exceeds 20 MB limit', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
-      const woId     = request.params.id
+      const woId = request.params.id
       const authorId = request.user.sub
       const tenantId = request.user.tid
 
       // Verify work order exists in tenant
       const wo = await request.db.workOrder.findFirst({
-        where:  { id: woId, deletedAt: null },
+        where: { id: woId, deletedAt: null },
         select: { id: true },
       })
       if (!wo) {
@@ -137,10 +139,10 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Build the MinIO storage key
-      const ext        = path.extname(rawFilename ?? '').toLowerCase() || ''
+      const ext = path.extname(rawFilename ?? '').toLowerCase() || ''
       const objectUuid = randomUUID()
       const storageKey = `${STORAGE_PREFIX}/${tenantId}/${woId}/${objectUuid}${ext}`
-      const fileName   = rawFilename ?? `attachment${ext}`
+      const fileName = rawFilename ?? `attachment${ext}`
 
       // Stream directly to MinIO (no local temp file)
       let bytesUploaded = 0
@@ -149,7 +151,7 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
           request.server.minioBucket,
           storageKey,
           fileStream,
-          undefined,     // size unknown — MinIO will use chunked transfer
+          undefined, // size unknown — MinIO will use chunked transfer
           { 'Content-Type': mimetype, 'x-tenant-id': tenantId },
         )
         // fileStream.bytesRead is populated by busboy after the stream ends
@@ -166,11 +168,11 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
       const attachment = await request.server.prisma.attachment.create({
         data: {
           tenantId,
-          workOrderId:  woId,
+          workOrderId: woId,
           uploadedById: authorId,
           fileName,
-          fileSize:     bytesUploaded,
-          mimeType:     mimetype,
+          fileSize: bytesUploaded,
+          mimeType: mimetype,
           storageKey,
         },
       })
@@ -179,13 +181,18 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
       const ua = request.headers['user-agent']
       await writeAuditLog(request.server.prisma, {
         tenantId,
-        userId:     authorId,
-        action:     'ADD_ATTACHMENT',
+        userId: authorId,
+        action: 'ADD_ATTACHMENT',
         entityType: 'WorkOrder',
-        entityId:   woId,
-        after:      { attachmentId: attachment.id, fileName, mimeType: mimetype, fileSize: bytesUploaded },
-        ipAddress:  request.ip ?? null,
-        userAgent:  typeof ua === 'string' ? ua : null,
+        entityId: woId,
+        after: {
+          attachmentId: attachment.id,
+          fileName,
+          mimeType: mimetype,
+          fileSize: bytesUploaded,
+        },
+        ipAddress: request.ip ?? null,
+        userAgent: typeof ua === 'string' ? ua : null,
       })
 
       // Generate presigned download URL
@@ -196,13 +203,13 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
       )
 
       return reply.status(201).send({
-        id:          attachment.id,
-        fileName:    attachment.fileName,
-        fileSize:    attachment.fileSize,
-        mimeType:    attachment.mimeType,
-        storageKey:  attachment.storageKey,
+        id: attachment.id,
+        fileName: attachment.fileName,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+        storageKey: attachment.storageKey,
         downloadUrl,
-        uploadedAt:  attachment.createdAt.toISOString(),
+        uploadedAt: attachment.createdAt.toISOString(),
       })
     },
   )
@@ -212,23 +219,22 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/attachments',
     {
       schema: {
-        description: 'List attachments for a work order with fresh presigned download URLs (valid 1 hour).',
-        tags:     ['work-orders'],
+        description:
+          'List attachments for a work order with fresh presigned download URLs (valid 1 hour).',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         response: {
-          200: { type: 'array',
-            items: { type: 'object' },
-          },
+          200: { type: 'array', items: { type: 'object', additionalProperties: true } },
           401: { description: 'Unauthorised', ...errorBody },
-          404: { description: 'Not found',    ...errorBody },
+          404: { description: 'Not found', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
       const rows = await request.db.attachment.findMany({
-        where:   { workOrderId: request.params.id },
+        where: { workOrderId: request.params.id },
         orderBy: { createdAt: 'asc' },
         include: { uploadedBy: { select: { id: true, name: true } } },
       })
@@ -247,15 +253,15 @@ const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
             downloadUrl = ''
           }
           return {
-            id:             r.id,
-            fileName:       r.fileName,
-            fileSize:       r.fileSize,
-            mimeType:       r.mimeType,
-            storageKey:     r.storageKey,
-            thumbnailKey:   r.thumbnailKey ?? null,
-            uploadedById:   r.uploadedById,
+            id: r.id,
+            fileName: r.fileName,
+            fileSize: r.fileSize,
+            mimeType: r.mimeType,
+            storageKey: r.storageKey,
+            thumbnailKey: r.thumbnailKey ?? null,
+            uploadedById: r.uploadedById,
             uploadedByName: r.uploadedBy.name,
-            uploadedAt:     r.createdAt.toISOString(),
+            uploadedAt: r.createdAt.toISOString(),
             downloadUrl,
           }
         }),
