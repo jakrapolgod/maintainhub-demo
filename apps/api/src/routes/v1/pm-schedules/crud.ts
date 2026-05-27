@@ -22,6 +22,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import type { TaskProps } from '@maintainhub/domain'
 import { requirePermission } from '../../../middleware/require-permission.js'
 import { DomainException } from '../../../errors/domain.exception.js'
+import { createAiAdapter } from '../../../lib/ai-client.js'
 import {
   CreatePMScheduleHandler,
   UpdatePMScheduleHandler,
@@ -329,13 +330,13 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('pm-schedule', 'create'),
     },
     async (request, reply) => {
-      if (!request.server.anthropic) {
+      if (!request.server.ai) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
       const body = aiSuggestBodySchema.parse(request.body)
 
-      const useCase = new GeneratePMScheduleFromAssetType(request.server.anthropic)
+      const useCase = new GeneratePMScheduleFromAssetType(createAiAdapter(request.server.ai))
 
       try {
         const result = await useCase.execute({

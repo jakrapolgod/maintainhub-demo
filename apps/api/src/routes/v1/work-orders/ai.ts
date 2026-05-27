@@ -31,6 +31,7 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { DomainException } from '../../../errors/domain.exception.js'
 import { withTenantFilter } from '../../../lib/tenant-prisma.js'
 import { requirePermission } from '../../../middleware/require-permission.js'
+import { createAiAdapter } from '../../../lib/ai-client.js'
 import {
   AI_MODEL,
   AI_MAX_TOKENS,
@@ -48,17 +49,21 @@ const draftBodySchema = z.object({
 })
 
 const analyzeBodySchema = z.object({
-  symptomDescription: z.string().trim().min(5, 'Symptom description required').max(2_000)
+  symptomDescription: z
+    .string()
+    .trim()
+    .min(5, 'Symptom description required')
+    .max(2_000)
     .default('No additional symptoms provided — use work order description'),
 })
 
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 
 function sseHeaders(raw: ServerResponse): void {
-  raw.setHeader('Content-Type',      'text/event-stream')
-  raw.setHeader('Cache-Control',     'no-cache, no-transform')
-  raw.setHeader('Connection',        'keep-alive')
-  raw.setHeader('X-Accel-Buffering', 'no')   // prevent nginx buffering
+  raw.setHeader('Content-Type', 'text/event-stream')
+  raw.setHeader('Cache-Control', 'no-cache, no-transform')
+  raw.setHeader('Connection', 'keep-alive')
+  raw.setHeader('X-Accel-Buffering', 'no') // prevent nginx buffering
   raw.flushHeaders()
 }
 
@@ -74,9 +79,9 @@ function userRateLimitKey(request: FastifyRequest): string {
     if (!auth.startsWith('Bearer ')) return `ai:ip:${request.ip}`
     // Decode payload without signature verification — only used as a bucket key;
     // full JWT verification runs in the preHandler (requirePermission).
-    const b64     = auth.slice(7).split('.')[1] ?? ''
+    const b64 = auth.slice(7).split('.')[1] ?? ''
     const payload = JSON.parse(Buffer.from(b64, 'base64url').toString()) as Record<string, unknown>
-    const sub     = typeof payload.sub === 'string' ? payload.sub : request.ip
+    const sub = typeof payload.sub === 'string' ? payload.sub : request.ip
     return `ai:user:${sub}`
   } catch {
     return `ai:ip:${request.ip}`
@@ -112,48 +117,54 @@ Be specific, reference manufacturer specs where relevant, and include exact torq
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 const aiRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ── POST /ai/draft ─────────────────────────────────────────────────────────
   // Static path — must be registered before dynamic /:id routes.
   fastify.post(
     '/ai/draft',
     {
       schema: {
-        description: 'Convert a natural-language maintenance request into a structured work-order draft using Claude. Returns draft only — nothing is saved.',
-        tags:     ['work-orders', 'ai'],
+        description:
+          'Convert a natural-language maintenance request into a structured work-order draft using Claude. Returns draft only — nothing is saved.',
+        tags: ['work-orders', 'ai'],
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           required: ['message'],
           properties: {
-            message: { type: 'string', minLength: 5, maxLength: 2000, description: 'Plain-language description of the maintenance need' },
+            message: {
+              type: 'string',
+              minLength: 5,
+              maxLength: 2000,
+              description: 'Plain-language description of the maintenance need',
+            },
             assetId: { type: 'string', description: 'Optional asset CUID for context enrichment' },
           },
           additionalProperties: false,
         },
         response: {
-          200: { type: 'object',
+          200: {
+            type: 'object',
             properties: {
-              title:              { type: 'string' },
-              description:        { type: 'string' },
-              type:               { type: 'string' },
-              priority:           { type: 'string' },
+              title: { type: 'string' },
+              description: { type: 'string' },
+              type: { type: 'string' },
+              priority: { type: 'string' },
               suggestedAssignees: { type: 'array', items: { type: 'string' } },
-              estimatedHours:     { type: 'number' },
-              originalMessage:    { type: 'string' },
-              assetId:            { type: 'string' },
+              estimatedHours: { type: 'number' },
+              originalMessage: { type: 'string' },
+              assetId: { type: 'string' },
             },
           },
-          401: { description: 'Unauthorised',   ...errorBody },
-          403: { description: 'Forbidden',       ...errorBody },
-          422: { description: 'AI error',        ...errorBody },
-          503: { description: 'AI unavailable',  ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          422: { description: 'AI error', ...errorBody },
+          503: { description: 'AI unavailable', ...errorBody },
         },
       } as OASSchema,
       config: {
         rateLimit: {
-          max:          20,
-          timeWindow:   '1 minute',
+          max: 20,
+          timeWindow: '1 minute',
           keyGenerator: userRateLimitKey,
         },
       },
@@ -164,16 +175,12 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
         request.db = withTenantFilter(request.server.prisma, request.user.tid)
         const { role } = request.user
         if (role !== 'ADMIN' && role !== 'MANAGER' && role !== 'TECHNICIAN') {
-          throw new DomainException(
-            `Forbidden: ${role} cannot use AI draft`,
-            'FORBIDDEN',
-            403,
-          )
+          throw new DomainException(`Forbidden: ${role} cannot use AI draft`, 'FORBIDDEN', 403)
         }
       },
     },
     async (request, reply) => {
-      if (!request.server.anthropic) {
+      if (!request.server.ai) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -182,13 +189,13 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const useCase = new DraftWorkOrderFromNLUseCase(
         request.db,
         request.server.prisma,
-        request.server.anthropic,
+        createAiAdapter(request.server.ai),
       )
 
       try {
         const draft = await useCase.execute({
           userMessage: body.message,
-          tenantId:    request.user.tid,
+          tenantId: request.user.tid,
           ...(body.assetId !== undefined && { assetId: body.assetId }),
         })
         return await reply.send(draft)
@@ -206,29 +213,35 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/ai/analyze-failure',
     {
       schema: {
-        description: 'Stream a failure analysis for a work order via Server-Sent Events. Returns JSON tokens progressively.',
-        tags:     ['work-orders', 'ai'],
+        description:
+          'Stream a failure analysis for a work order via Server-Sent Events. Returns JSON tokens progressively.',
+        tags: ['work-orders', 'ai'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           properties: {
-            symptomDescription: { type: 'string', minLength: 5, maxLength: 2000, description: 'Additional symptom context' },
+            symptomDescription: {
+              type: 'string',
+              minLength: 5,
+              maxLength: 2000,
+              description: 'Additional symptom context',
+            },
           },
           additionalProperties: false,
         },
         response: {
           200: { type: 'null' },
-          401: { description: 'Unauthorised',  ...errorBody },
-          403: { description: 'Forbidden',     ...errorBody },
-          404: { description: 'WO not found',  ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'WO not found', ...errorBody },
           503: { description: 'AI unavailable', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'update'),
     },
     async (request, reply) => {
-      if (!request.server.anthropic) {
+      if (!request.server.ai) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -236,16 +249,25 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Load WO + asset + maintenance history
       const wo = await request.db.workOrder.findFirst({
-        where:  { id: request.params.id, deletedAt: null },
+        where: { id: request.params.id, deletedAt: null },
         select: {
-          id: true, woNumber: true, title: true, description: true,
-          type: true, priority: true, status: true, assetId: true,
+          id: true,
+          woNumber: true,
+          title: true,
+          description: true,
+          type: true,
+          priority: true,
+          status: true,
+          assetId: true,
           asset: {
             select: {
-              name: true, criticality: true, manufacturer: true, model: true,
+              name: true,
+              criticality: true,
+              manufacturer: true,
+              model: true,
               description: true,
               category: { select: { name: true } },
-              location:  { select: { name: true } },
+              location: { select: { name: true } },
             },
           },
           failureCode: { select: { code: true, name: true, category: true } },
@@ -256,12 +278,22 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const history = await request.server.prisma.workOrder.findMany({
-        where:   { tenantId: request.user.tid, assetId: wo.assetId, id: { not: wo.id }, deletedAt: null },
+        where: {
+          tenantId: request.user.tid,
+          assetId: wo.assetId,
+          id: { not: wo.id },
+          deletedAt: null,
+        },
         orderBy: { createdAt: 'desc' },
-        take:    20,
+        take: 20,
         select: {
-          woNumber: true, title: true, type: true, priority: true,
-          status: true, resolution: true, completedAt: true,
+          woNumber: true,
+          title: true,
+          type: true,
+          priority: true,
+          status: true,
+          resolution: true,
+          completedAt: true,
           failureCode: { select: { code: true, name: true } },
         },
       })
@@ -275,7 +307,9 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       ]
       if (wo.description) lines.push(`Description: ${wo.description}`)
       if (wo.failureCode) {
-        lines.push(`Failure code: ${wo.failureCode.code} — ${wo.failureCode.name} (${wo.failureCode.category})`)
+        lines.push(
+          `Failure code: ${wo.failureCode.code} — ${wo.failureCode.name} (${wo.failureCode.category})`,
+        )
       }
       const a = wo.asset
       lines.push('\n--- Asset information ---')
@@ -289,8 +323,10 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
         lines.push('\n--- Maintenance history (last 20) ---')
         for (const h of history) {
           const date = h.completedAt ? h.completedAt.toISOString().slice(0, 10) : 'open'
-          const fc   = h.failureCode ? ` [${h.failureCode.code}]` : ''
-          lines.push(`[${date}] ${h.woNumber} ${h.type}/${h.priority}${fc} — ${h.title} (${h.status})`)
+          const fc = h.failureCode ? ` [${h.failureCode.code}]` : ''
+          lines.push(
+            `[${date}] ${h.woNumber} ${h.type}/${h.priority}${fc} — ${h.title} (${h.status})`,
+          )
           if (h.resolution) lines.push(`  Resolution: ${h.resolution}`)
         }
       } else {
@@ -302,36 +338,37 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const { raw } = reply
       sseHeaders(raw)
 
-      const stream = request.server.anthropic.messages.stream({
-        model:      AI_MODEL,
-        max_tokens: AI_MAX_TOKENS,
-        system:     ANALYZE_FAILURE_PROMPT,
-        messages:   [{ role: 'user', content: lines.join('\n') }],
-      })
-
       try {
-        for await (const event of stream) {
+        const stream = await request.server.ai.chat.completions.create({
+          model: AI_MODEL,
+          max_tokens: AI_MAX_TOKENS,
+          stream: true,
+          stream_options: { include_usage: true },
+          messages: [
+            { role: 'system', content: ANALYZE_FAILURE_PROMPT },
+            { role: 'user', content: lines.join('\n') },
+          ],
+        })
+
+        let inputTokens = 0
+        let outputTokens = 0
+
+        for await (const chunk of stream) {
           if (raw.destroyed) break
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            writeSse(raw, { type: 'delta', text: event.delta.text })
+          const text = chunk.choices[0]?.delta?.content
+          if (text) writeSse(raw, { type: 'delta', text })
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens
+            outputTokens = chunk.usage.completion_tokens
           }
         }
-        const final = await stream.finalMessage()
-        writeSse(raw, {
-          type:  'done',
-          usage: {
-            inputTokens:  final.usage.input_tokens,
-            outputTokens: final.usage.output_tokens,
-          },
-        })
+
+        writeSse(raw, { type: 'done', usage: { inputTokens, outputTokens } })
       } catch (err) {
         if (!raw.destroyed) {
           writeSse(raw, {
-            type:    'error',
-            code:    'AI_API_ERROR',
+            type: 'error',
+            code: 'AI_API_ERROR',
             message: err instanceof Error ? err.message : 'Stream interrupted',
           })
         }
@@ -346,39 +383,49 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/ai/generate-instructions',
     {
       schema: {
-        description: 'Stream step-by-step work instructions for a work order via Server-Sent Events. Returns Markdown tokens progressively.',
-        tags:     ['work-orders', 'ai'],
+        description:
+          'Stream step-by-step work instructions for a work order via Server-Sent Events. Returns Markdown tokens progressively.',
+        tags: ['work-orders', 'ai'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         response: {
           200: { type: 'null' },
-          401: { description: 'Unauthorised',  ...errorBody },
-          404: { description: 'WO not found',  ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          404: { description: 'WO not found', ...errorBody },
           503: { description: 'AI unavailable', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
-      if (!request.server.anthropic) {
+      if (!request.server.ai) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
       // Load WO + asset + PM schedule
       const wo = await request.db.workOrder.findFirst({
-        where:  { id: request.params.id, deletedAt: null },
+        where: { id: request.params.id, deletedAt: null },
         select: {
-          id: true, woNumber: true, title: true, description: true,
-          type: true, priority: true, assigneeIds: true,
+          id: true,
+          woNumber: true,
+          title: true,
+          description: true,
+          type: true,
+          priority: true,
+          assigneeIds: true,
           asset: {
             select: {
-              name: true, criticality: true, manufacturer: true,
-              model: true, serialNumber: true, description: true,
-              category:    { select: { name: true } },
-              location:    { select: { name: true } },
+              name: true,
+              criticality: true,
+              manufacturer: true,
+              model: true,
+              serialNumber: true,
+              description: true,
+              category: { select: { name: true } },
+              location: { select: { name: true } },
               pmSchedules: {
-                where:  { isActive: true },
-                take:   1,
+                where: { isActive: true },
+                take: 1,
                 select: { requiredSkills: true, estimatedHours: true },
               },
             },
@@ -391,7 +438,7 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       // Build prompt content
-      const a     = wo.asset
+      const a = wo.asset
       const lines: string[] = [
         'Generate work instructions for the following work order:',
         '',
@@ -400,8 +447,13 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
         `**Title:** ${wo.title}`,
       ]
       if (wo.description) lines.push(`**Description:** ${wo.description}`)
-      lines.push('', '**Asset Information:**', `- Name: ${a.name}`, `- Category: ${a.category.name}`)
-      if (a.location)   lines.push(`- Location: ${a.location.name}`)
+      lines.push(
+        '',
+        '**Asset Information:**',
+        `- Name: ${a.name}`,
+        `- Category: ${a.category.name}`,
+      )
+      if (a.location) lines.push(`- Location: ${a.location.name}`)
       if (a.manufacturer ?? a.model) {
         lines.push(`- Equipment: ${[a.manufacturer, a.model].filter(Boolean).join(' ')}`)
       }
@@ -409,7 +461,9 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       lines.push(`- Criticality: ${a.criticality}`)
       if (wo.failureCode) {
         lines.push('', '**Failure Mode:**')
-        lines.push(`- Code: ${wo.failureCode.code} — ${wo.failureCode.name} (${wo.failureCode.category})`)
+        lines.push(
+          `- Code: ${wo.failureCode.code} — ${wo.failureCode.name} (${wo.failureCode.category})`,
+        )
         if (wo.failureCode.notes) lines.push(`- Notes: ${wo.failureCode.notes}`)
       }
       const pm = a.pmSchedules[0]
@@ -425,36 +479,37 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const { raw } = reply
       sseHeaders(raw)
 
-      const stream = request.server.anthropic.messages.stream({
-        model:      AI_MODEL,
-        max_tokens: AI_MAX_TOKENS,
-        system:     INSTRUCTIONS_PROMPT,
-        messages:   [{ role: 'user', content: lines.join('\n') }],
-      })
-
       try {
-        for await (const event of stream) {
+        const stream = await request.server.ai.chat.completions.create({
+          model: AI_MODEL,
+          max_tokens: AI_MAX_TOKENS,
+          stream: true,
+          stream_options: { include_usage: true },
+          messages: [
+            { role: 'system', content: INSTRUCTIONS_PROMPT },
+            { role: 'user', content: lines.join('\n') },
+          ],
+        })
+
+        let inputTokens = 0
+        let outputTokens = 0
+
+        for await (const chunk of stream) {
           if (raw.destroyed) break
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            writeSse(raw, { type: 'delta', text: event.delta.text })
+          const text = chunk.choices[0]?.delta?.content
+          if (text) writeSse(raw, { type: 'delta', text })
+          if (chunk.usage) {
+            inputTokens = chunk.usage.prompt_tokens
+            outputTokens = chunk.usage.completion_tokens
           }
         }
-        const final = await stream.finalMessage()
-        writeSse(raw, {
-          type:  'done',
-          usage: {
-            inputTokens:  final.usage.input_tokens,
-            outputTokens: final.usage.output_tokens,
-          },
-        })
+
+        writeSse(raw, { type: 'done', usage: { inputTokens, outputTokens } })
       } catch (err) {
         if (!raw.destroyed) {
           writeSse(raw, {
-            type:    'error',
-            code:    'AI_API_ERROR',
+            type: 'error',
+            code: 'AI_API_ERROR',
             message: err instanceof Error ? err.message : 'Stream interrupted',
           })
         }

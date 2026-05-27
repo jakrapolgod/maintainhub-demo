@@ -19,7 +19,7 @@ import { z } from 'zod'
 
 // ── Model constant ────────────────────────────────────────────────────────────
 
-export const AI_MODEL = 'claude-sonnet-4-20250514'
+export const AI_MODEL = 'anthropic/claude-sonnet-4-5'
 export const AI_MAX_TOKENS = 1024
 
 // ── Anthropic client interface (injectable / mockable) ────────────────────────

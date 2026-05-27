@@ -51,8 +51,9 @@ const envSchema = z.object({
   // Frontend base URL — used to build invitation accept links in emails
   APP_URL: z.string().url().default('http://localhost:3000'),
 
-  // Anthropic — optional until AI routes are wired up
-  ANTHROPIC_API_KEY: z.string().optional(),
+  // OpenRouter — optional; AI routes return 503 when not configured
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_BASE_URL: z.string().default('https://openrouter.ai/api/v1'),
 
   // MinIO — S3-compatible object storage for attachments
   MINIO_ENDPOINT: z.string().default('localhost'),
