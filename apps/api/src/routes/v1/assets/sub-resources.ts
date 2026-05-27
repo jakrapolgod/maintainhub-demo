@@ -55,7 +55,7 @@ const subResourceRoutes: FastifyPluginAsync = async (fastify) => {
           properties: { asOf: { type: 'string', format: 'date-time' } },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           404: { description: 'Not found', ...errorBody },
         },
@@ -95,9 +95,10 @@ const subResourceRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
-              data: { type: 'array', items: { type: 'object' } },
-              pagination: { type: 'object' },
+              data: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              pagination: { type: 'object', additionalProperties: true },
             },
           },
           401: { description: 'Unauthorised', ...errorBody },
@@ -168,7 +169,7 @@ const subResourceRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'array', items: { type: 'object' } },
+          200: { type: 'array', items: { type: 'object', additionalProperties: true } },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,

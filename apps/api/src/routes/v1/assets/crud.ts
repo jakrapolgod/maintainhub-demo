@@ -13,6 +13,7 @@
  */
 import { z } from 'zod'
 import type { FastifyPluginAsync } from 'fastify'
+import type { Asset } from '@maintainhub/domain'
 import { DomainException } from '../../../errors/domain.exception.js'
 import { requirePermission } from '../../../middleware/require-permission.js'
 import {
@@ -39,6 +40,34 @@ import {
   invalidateAssetTreeCache,
 } from './route-helpers.js'
 import type { OASSchema } from './route-helpers.js'
+
+// ── DTO projection ────────────────────────────────────────────────────────────
+
+/**
+ * Convert a domain `Asset` (with value-object properties) to a plain JSON-
+ * serialisable DTO. This prevents fast-json-stringify from emitting `{ value: "…" }`
+ * for AssetId, AssetNumber, AssetStatus, etc.
+ */
+function assetToDto(a: Asset): Record<string, unknown> {
+  return {
+    id: a.id.value,
+    assetNumber: a.assetNumber.value,
+    name: a.name,
+    description: a.description ?? null,
+    status: a.status.value,
+    criticality: a.criticality.value,
+    categoryId: a.categoryId,
+    locationId: a.locationId ?? null,
+    parentId: a.parentId?.value ?? null,
+    manufacturer: a.manufacturer ?? null,
+    model: a.model ?? null,
+    serialNumber: a.serialNumber ?? null,
+    installDate: a.installDate?.toISOString() ?? null,
+    warrantyExpiry: a.warrantyExpiry?.toISOString() ?? null,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt?.toISOString() ?? null,
+  }
+}
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -172,7 +201,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
             },
           },
@@ -196,7 +225,8 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
         ...(q.hasOpenWOs !== undefined && { hasOpenWOs: q.hasOpenWOs }),
       }
       const result = await repo.findByFilters(filters, request.user.tid)
-      return reply.send(result)
+      // Project domain objects → plain DTOs before serialization
+      return reply.send({ items: result.items.map(assetToDto), total: result.total })
     },
   )
 
@@ -217,7 +247,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -259,7 +289,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           403: { description: 'Forbidden', ...errorBody },
         },
@@ -294,7 +324,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -330,7 +360,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
         },
       } as OASSchema,
@@ -359,7 +389,7 @@ const crudRoutes: FastifyPluginAsync = async (fastify) => {
         security: [{ bearerAuth: [] }],
         params: assetIdParam,
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           404: { description: 'Not found', ...errorBody },
         },
