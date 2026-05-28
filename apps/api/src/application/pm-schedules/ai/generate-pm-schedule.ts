@@ -13,8 +13,8 @@
  *   4. Include specific task instructions a technician can follow
  *
  * ## Error handling
- *   - AiError(AI_UNAVAILABLE)  when ANTHROPIC_API_KEY is not configured
- *   - AiError(AI_API_ERROR)    on Anthropic API failure
+ *   - AiError(AI_UNAVAILABLE)  when OPENROUTER_API_KEY is not configured
+ *   - AiError(AI_API_ERROR)    on OpenRouter API failure
  *   - AiError(AI_PARSE_ERROR)  on non-JSON response
  *   - AiError(AI_VALIDATION_ERROR) when JSON doesn't match schema
  */
