@@ -10,19 +10,23 @@ import type { Metadata } from 'next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useLogin } from '@/hooks/use-auth'
 import { ApiError } from '@/lib/api'
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
+const TENANT_SLUG = process.env.NEXT_PUBLIC_TENANT_SLUG ?? 'demo-corp'
+
 const loginSchema = z.object({
-  tenantSlug: z
-    .string()
-    .trim()
-    .min(1, 'Workspace identifier is required')
-    .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens'),
   email: z.string().trim().email('Enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
 })
@@ -36,23 +40,20 @@ export default function LoginPage() {
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { tenantSlug: '', email: '', password: '' },
+    defaultValues: { email: '', password: '' },
   })
 
   function onSubmit(values: LoginValues) {
-    login.mutate(values)
+    login.mutate({ ...values, tenantSlug: TENANT_SLUG })
   }
 
-  const serverError =
-    login.error instanceof ApiError ? login.error.message : undefined
+  const serverError = login.error instanceof ApiError ? login.error.message : undefined
 
   return (
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
-        <CardDescription>
-          Enter your workspace, email, and password to continue
-        </CardDescription>
+        <CardDescription>Enter your email and password to access MaintainHub</CardDescription>
       </CardHeader>
 
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
@@ -63,23 +64,6 @@ export default function LoginPage() {
               <AlertDescription>{serverError}</AlertDescription>
             </Alert>
           )}
-
-          {/* Workspace slug */}
-          <div className="space-y-1.5">
-            <Label htmlFor="tenantSlug">Workspace</Label>
-            <Input
-              id="tenantSlug"
-              placeholder="acme-corp"
-              autoCapitalize="none"
-              autoComplete="organization"
-              {...form.register('tenantSlug')}
-            />
-            {form.formState.errors.tenantSlug && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.tenantSlug.message}
-              </p>
-            )}
-          </div>
 
           {/* Email */}
           <div className="space-y-1.5">
@@ -92,9 +76,7 @@ export default function LoginPage() {
               {...form.register('email')}
             />
             {form.formState.errors.email && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.email.message}
-              </p>
+              <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
             )}
           </div>
 
@@ -102,10 +84,7 @@ export default function LoginPage() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-primary hover:underline"
-              >
+              <Link href="/forgot-password" className="text-xs text-primary hover:underline">
                 Forgot password?
               </Link>
             </div>
@@ -116,29 +95,21 @@ export default function LoginPage() {
               {...form.register('password')}
             />
             {form.formState.errors.password && (
-              <p className="text-xs text-destructive">
-                {form.formState.errors.password.message}
-              </p>
+              <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
             )}
           </div>
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3">
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={login.isPending}
-          >
-            {login.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
+          <Button type="submit" className="w-full" disabled={login.isPending}>
+            {login.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sign in
           </Button>
 
           <p className="text-sm text-muted-foreground text-center">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="text-primary hover:underline font-medium">
-              Create workspace
+              Sign up
             </Link>
           </p>
         </CardFooter>
