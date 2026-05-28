@@ -14,8 +14,13 @@ dotenvLoad({ path: resolve(process.cwd(), '.env'), override: false })
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Server
-  API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+  // Server — Railway injects PORT; API_PORT takes precedence if explicitly set
+  API_PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(process.env.PORT ? parseInt(process.env.PORT, 10) : 4000),
   API_HOST: z.string().default('0.0.0.0'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 
