@@ -22,6 +22,9 @@ const TENANT_MODELS = new Set([
   'WebhookEndpoint',
   'WebhookDelivery',
   'Integration',
+  'Site',
+  'PermitToWork',
+  'ContractorToken',
 ])
 
 // ── Operations that carry a WHERE clause ──────────────────────────────────────

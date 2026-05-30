@@ -13,6 +13,7 @@
 import { z } from 'zod'
 import type { FastifyPluginAsync } from 'fastify'
 import { requirePermission } from '../../../middleware/require-permission.js'
+import { DomainException } from '../../../errors/domain.exception.js'
 import { invalidateListCache } from '../../../application/work-orders/queries/index.js'
 import {
   AssignWorkOrderHandler,
@@ -200,6 +201,21 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('work-order', 'complete'),
     },
     async (request, reply) => {
+      // ── PTW guard ───────────────────────────────────────────────────────────
+      // A WO with an ACTIVE Permit-to-Work cannot be completed until the PTW is
+      // closed first (safety invariant: site must be handed back before sign-off).
+      const activePtw = await request.db.permitToWork.findFirst({
+        where: { workOrderId: request.params.id, status: 'ACTIVE' },
+        select: { id: true, permitNumber: true },
+      })
+      if (activePtw) {
+        throw new DomainException(
+          `Work order cannot be completed while Permit-to-Work ${activePtw.permitNumber} is ACTIVE. Close the PTW first.`,
+          'PTW_STILL_ACTIVE',
+          422,
+        )
+      }
+
       const body = completeBodySchema.parse(request.body)
       const ctx = buildCmdCtx(request)
       const woRepo = makeWoRepo(request)

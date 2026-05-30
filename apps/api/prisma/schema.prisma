@@ -69,6 +69,16 @@ enum TriggerType {
   CONDITION
 }
 
+/// Permit-to-Work lifecycle states
+enum PTWStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ACTIVE
+  CLOSED
+  REJECTED
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // BOUNDED CONTEXT: Multi-tenancy
 // ══════════════════════════════════════════════════════════════════════════════
@@ -96,6 +106,9 @@ model Tenant {
   invitations      Invitation[]
   webhookEndpoints WebhookEndpoint[]
   integrations     Integration[]
+  sites            Site[]
+  permits          PermitToWork[]
+  contractorTokens ContractorToken[]
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -127,6 +140,7 @@ model User {
   attachments     Attachment[]
   auditLogs       AuditLog[]
   sentInvitations Invitation[] @relation("InvitationSender")
+  userSites       UserSite[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -198,6 +212,8 @@ model Asset {
   /// Self-reference for hierarchy: Plant > Building > System > Equipment > Component
   parentId       String?
   locationId     String?
+  /// Optional site assignment for multi-site isolation
+  siteId         String?
   criticality    Criticality @default(C)
   status         AssetStatus @default(OPERATIONAL)
   manufacturer   String?
@@ -217,6 +233,7 @@ model Asset {
   tenant      Tenant        @relation(fields: [tenantId], references: [id])
   category    AssetCategory @relation(fields: [categoryId], references: [id])
   location    Location?     @relation(fields: [locationId], references: [id])
+  site        Site?         @relation(fields: [siteId], references: [id])
   parent      Asset?        @relation("AssetHierarchy", fields: [parentId], references: [id])
   children    Asset[]       @relation("AssetHierarchy")
   workOrders  WorkOrder[]
@@ -224,6 +241,7 @@ model Asset {
   attachments Attachment[]
 
   @@unique([tenantId, assetNumber])
+  @@index([tenantId, siteId])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, criticality])
@@ -261,6 +279,8 @@ model WorkOrder {
   /// Denormalized totals updated when labor entries / part usages change
   totalLaborCost Decimal?  @db.Decimal(12, 2)
   totalPartsCost Decimal?  @db.Decimal(12, 2)
+  /// Optional site assignment for multi-site isolation
+  siteId         String?
   createdById    String
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
@@ -268,6 +288,7 @@ model WorkOrder {
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   asset        Asset        @relation(fields: [assetId], references: [id])
+  site         Site?        @relation(fields: [siteId], references: [id])
   parent       WorkOrder?   @relation("WorkOrderHierarchy", fields: [parentId], references: [id])
   children     WorkOrder[]  @relation("WorkOrderHierarchy")
   failureCode  FailureCode? @relation(fields: [failureCodeId], references: [id])
@@ -275,10 +296,12 @@ model WorkOrder {
   partUsages   PartUsage[]
   attachments  Attachment[]
   comments     Comment[]
+  permit       PermitToWork?
 
   @@unique([tenantId, woNumber])
   @@index([tenantId, status])
   @@index([tenantId, assetId])
+  @@index([tenantId, siteId])
   @@index([tenantId, priority, status])
   @@index([tenantId, createdAt])
   @@index([tenantId, dueDate])
@@ -587,5 +610,117 @@ model Invitation {
   @@index([tenantId, email])
   @@index([tokenHash])
   @@index([tenantId, acceptedAt])
+  @@index([expiresAt])
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BOUNDED CONTEXT: Multi-site Management
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// A physical site (plant, building, campus) within a tenant.
+/// MANAGER users are scoped to one or more sites; ADMIN sees all sites.
+model Site {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  code      String
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id])
+  userSites  UserSite[]
+  assets     Asset[]
+  workOrders WorkOrder[]
+  permits    PermitToWork[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+/// Many-to-many: which users (MANAGER role) are assigned to which sites.
+model UserSite {
+  userId     String
+  siteId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([userId, siteId])
+  @@index([siteId])
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BOUNDED CONTEXT: Permit To Work (PTW)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Full Permit-to-Work entity with lifecycle states.
+/// State machine: DRAFT → SUBMITTED → APPROVED → ACTIVE → CLOSED (or REJECTED)
+model PermitToWork {
+  id                String    @id @default(cuid())
+  tenantId          String
+  workOrderId       String    @unique
+  permitNumber      String
+  status            PTWStatus @default(DRAFT)
+  title             String
+  description       String?
+  riskLevel         String    @default("MEDIUM")
+  hazards           String[]
+  precautions       String[]
+  requiredPPE       String[]
+  /// AI-generated risk assessment result (JSON blob from OpenRouter)
+  aiAssessment      Json?
+  siteId            String?
+  submittedAt       DateTime?
+  submittedById     String?
+  approvedAt        DateTime?
+  approvedById      String?
+  /// Base64-encoded approver signature image
+  approverSignature String?
+  activatedAt       DateTime?
+  activatedById     String?
+  closedAt          DateTime?
+  closedById        String?
+  expiresAt         DateTime?
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  site      Site?     @relation(fields: [siteId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, workOrderId])
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BOUNDED CONTEXT: Contractor Portal
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// Short-lived access tokens for contractor portal authentication.
+/// The actual token value is never stored — only its SHA-256 hash.
+model ContractorToken {
+  id              String    @id @default(cuid())
+  tenantId        String
+  /// SHA-256 hash of the opaque token value
+  tokenHash       String    @unique
+  contractorName  String
+  contractorEmail String?
+  /// Subset of WO IDs this contractor is authorised to view
+  workOrderIds    String[]
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdById     String
+  createdAt       DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tokenHash])
   @@index([expiresAt])
 }

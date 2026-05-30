@@ -97,6 +97,8 @@ function makePrisma() {
       create: jest.fn().mockResolvedValue({ id: 'new-wo' }),
     },
     user: { findMany: jest.fn().mockResolvedValue([]) },
+    $executeRawUnsafe: jest.fn().mockResolvedValue(undefined),
+    $queryRawUnsafe: jest.fn().mockResolvedValue([{ nextval: BigInt(1) }]),
   }
 }
 
@@ -138,7 +140,7 @@ describe('DoD #5 — ManualTriggerPMHandler: WO created and nextDueAt advances c
 
     // WO was created with a valid WO number
     expect(result.workOrderId).toBeTruthy()
-    expect(result.woNumber).toMatch(/^WO-\d{6}$/)
+    expect(result.woNumber).toMatch(/^WO-\d{4}-\d{6}$/)
 
     // nextDueAt advanced (1 month forward from the overdue date)
     expect(result.nextDueAt).not.toBeNull()
