@@ -43,11 +43,13 @@ const VALID_RESPONSE = JSON.stringify({
 
 function makeAI(responseText: string): AnthropicClient {
   return {
-    messages: {
-      create: jest.fn().mockResolvedValue({
-        content: [{ type: 'text', text: responseText }],
-        usage: { input_tokens: 100, output_tokens: 200 },
-      }),
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [{ message: { role: 'assistant', content: responseText } }],
+          usage: { prompt_tokens: 100, completion_tokens: 200 },
+        }),
+      },
     },
   }
 }
@@ -76,11 +78,12 @@ describe('GeneratePMScheduleFromAssetType', () => {
       model: 'CR 10-4',
     })
 
-    const createCall = (ai.messages.create as jest.Mock).mock.calls[0][0] as {
+    const createCall = (ai.chat.completions.create as jest.Mock).mock.calls[0][0] as {
       messages: Array<{ content: string }>
     }
-    expect(createCall.messages[0]!.content).toContain('Grundfos')
-    expect(createCall.messages[0]!.content).toContain('CR 10-4')
+    // messages[0] = system prompt, messages[1] = user content
+    expect(createCall.messages[1]!.content).toContain('Grundfos')
+    expect(createCall.messages[1]!.content).toContain('CR 10-4')
   })
 
   it('throws AI_API_ERROR when assetType is empty', async () => {
@@ -88,10 +91,12 @@ describe('GeneratePMScheduleFromAssetType', () => {
     await expect(useCase.execute({ assetType: '' })).rejects.toMatchObject({ code: 'AI_API_ERROR' })
   })
 
-  it('throws AI_API_ERROR when Anthropic API fails', async () => {
+  it('throws AI_API_ERROR when API fails', async () => {
     const ai = {
-      messages: {
-        create: jest.fn().mockRejectedValue(new Error('Network error')),
+      chat: {
+        completions: {
+          create: jest.fn().mockRejectedValue(new Error('Network error')),
+        },
       },
     }
     const useCase = new GeneratePMScheduleFromAssetType(ai)

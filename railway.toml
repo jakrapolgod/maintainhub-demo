@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter @maintainhub/domain build && pnpm --filter @maintainhub/api build"
+
+[deploy]
+startCommand = "pnpm --filter @maintainhub/api db:migrate:prod && node apps/api/dist/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+healthcheckPath = "/health"
+healthcheckTimeout = 30

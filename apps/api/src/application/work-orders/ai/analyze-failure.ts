@@ -225,18 +225,20 @@ export class AnalyzeFailureUseCase {
     // ── 2. Build prompt ───────────────────────────────────────────────────────
     const userContent = buildUserContent(wo, history, input.symptomDescription)
 
-    // ── 3. Call Claude ────────────────────────────────────────────────────────
+    // ── 3. Call AI ────────────────────────────────────────────────────────────
     let message
     try {
-      message = await this.ai.messages.create({
+      message = await this.ai.chat.completions.create({
         model: AI_MODEL,
         max_tokens: AI_MAX_TOKENS,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userContent }],
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
       })
     } catch (err) {
       throw new AiError(
-        `Anthropic API error: ${err instanceof Error ? err.message : String(err)}`,
+        `AI API error: ${err instanceof Error ? err.message : String(err)}`,
         'AI_API_ERROR',
       )
     }

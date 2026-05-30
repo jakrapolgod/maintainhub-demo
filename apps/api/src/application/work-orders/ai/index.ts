@@ -14,7 +14,8 @@ export {
 export type {
   AnthropicClient,
   AnthropicMessage,
-  AnthropicMessagesCreate,
+  AIMessage,
+  AICompletionParams,
   MonitoringPort,
   TokenUsage,
   AiErrorCode,

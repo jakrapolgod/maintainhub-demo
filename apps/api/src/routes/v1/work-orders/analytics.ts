@@ -92,9 +92,7 @@ async function fetchTrend(
   dateTo: Date,
   groupBy: 'day' | 'week' | 'month',
 ): Promise<TrendRow[]> {
-  // Prisma.raw inserts verbatim — wrap in single quotes so Postgres treats it
-  // as a string literal, not an identifier.
-  const trunc = Prisma.raw(`'${groupBy}'`)
+  const trunc = Prisma.raw(groupBy)
   const rows = await prisma.$queryRaw<
     Array<{
       period: Date
@@ -103,14 +101,14 @@ async function fetchTrend(
     }>
   >`
     SELECT
-      DATE_TRUNC(${trunc}, "createdAt") AS period,
+      DATE_TRUNC(${trunc}, created_at) AS period,
       status,
       COUNT(*)::INTEGER                AS count
-    FROM "WorkOrder"
-    WHERE "tenantId" = ${tenantId}
-      AND "deletedAt" IS NULL
-      AND "createdAt" >= ${dateFrom}
-      AND "createdAt" <= ${dateTo}
+    FROM work_orders
+    WHERE tenant_id = ${tenantId}
+      AND deleted_at IS NULL
+      AND created_at >= ${dateFrom}
+      AND created_at <= ${dateTo}
     GROUP BY period, status
     ORDER BY period ASC
   `
@@ -157,13 +155,13 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              byStatus: { type: 'object' },
-              byPriority: { type: 'object' },
+              byStatus: { type: 'object', additionalProperties: true },
+              byPriority: { type: 'object', additionalProperties: true },
               overdueCount: { type: 'integer' },
               avgCompletionHours: { type: 'number', nullable: true },
               mttr: { type: 'number', nullable: true, description: 'Mean Time To Repair (hours)' },
               totalCost: { type: 'number' },
-              trend: { type: 'array', items: { type: 'object' } },
+              trend: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           401: { description: 'Unauthorised', ...errorBody },
@@ -283,7 +281,7 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
             properties: {
               from: { type: 'string' },
               to: { type: 'string' },
-              days: { type: 'array', items: { type: 'object' } },
+              days: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           400: { description: 'Validation error', ...errorBody },

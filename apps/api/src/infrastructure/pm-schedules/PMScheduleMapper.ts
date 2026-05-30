@@ -87,7 +87,7 @@ export class PMScheduleMapper {
               | 'monthly'
               | 'quarterly'
               | 'annually',
-            interval: calRaw.interval,
+            interval: calRaw.interval ?? 1,
             dayOfWeek: calRaw.dayOfWeek,
             dayOfMonth: calRaw.dayOfMonth,
             month: calRaw.month,

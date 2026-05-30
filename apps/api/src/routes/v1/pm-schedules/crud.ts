@@ -22,7 +22,6 @@ import type { FastifyPluginAsync } from 'fastify'
 import type { TaskProps } from '@maintainhub/domain'
 import { requirePermission } from '../../../middleware/require-permission.js'
 import { DomainException } from '../../../errors/domain.exception.js'
-import { createAiAdapter } from '../../../lib/ai-client.js'
 import {
   CreatePMScheduleHandler,
   UpdatePMScheduleHandler,
@@ -186,7 +185,6 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
-            additionalProperties: true,
             properties: {
               items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
@@ -232,10 +230,14 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
             title: { type: 'string', minLength: 1, maxLength: 200 },
             description: { type: 'string', maxLength: 5000 },
             type: { type: 'string', enum: ['CALENDAR', 'METER', 'CONDITION'] },
-            calendarRule: { type: 'object' },
-            meterRule: { type: 'object' },
-            conditionRule: { type: 'object' },
-            taskList: { type: 'array', items: { type: 'object' }, minItems: 1 },
+            calendarRule: { type: 'object', additionalProperties: true },
+            meterRule: { type: 'object', additionalProperties: true },
+            conditionRule: { type: 'object', additionalProperties: true },
+            taskList: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+              minItems: 1,
+            },
             estimatedHours: { type: 'number', minimum: 0 },
             requiredSkillIds: { type: 'array', items: { type: 'string' } },
             defaultAssigneeIds: { type: 'array', items: { type: 'string' } },
@@ -318,7 +320,7 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              schedules: { type: 'array', items: { type: 'object' } },
+              schedules: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           400: { description: 'Validation error', ...errorBody },
@@ -330,13 +332,13 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('pm-schedule', 'create'),
     },
     async (request, reply) => {
-      if (!request.server.ai) {
+      if (!request.server.openrouter) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
       const body = aiSuggestBodySchema.parse(request.body)
 
-      const useCase = new GeneratePMScheduleFromAssetType(createAiAdapter(request.server.ai))
+      const useCase = new GeneratePMScheduleFromAssetType(request.server.openrouter)
 
       try {
         const result = await useCase.execute({
@@ -437,7 +439,11 @@ const pmCrudRoutes: FastifyPluginAsync = async (fastify) => {
             description: { type: 'string', maxLength: 5000 },
             calendarRule: { type: 'object', nullable: true },
             meterRule: { type: 'object', nullable: true },
-            taskList: { type: 'array', items: { type: 'object' }, minItems: 1 },
+            taskList: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true },
+              minItems: 1,
+            },
             estimatedHours: { type: 'number', minimum: 0 },
             requiredSkillIds: { type: 'array', items: { type: 'string' } },
             defaultAssigneeIds: { type: 'array', items: { type: 'string' } },

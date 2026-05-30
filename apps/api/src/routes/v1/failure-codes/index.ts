@@ -94,9 +94,9 @@ const failureCodeRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
-              tree: { type: 'array', items: { type: 'object' } },
+              tree: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
           401: { description: 'Unauthorised', ...errorBody },
@@ -185,7 +185,7 @@ const failureCodeRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              items: { type: 'array', items: { type: 'object' } },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
               query: { type: 'string' },
             },
@@ -245,7 +245,7 @@ const failureCodeRoutes: FastifyPluginAsync = async (fastify) => {
           properties: { id: { type: 'string' } },
         },
         response: {
-          200: { type: 'object' },
+          200: { type: 'object', additionalProperties: true },
           401: { description: 'Unauthorised', ...errorBody },
           404: { description: 'Not found', ...errorBody },
         },

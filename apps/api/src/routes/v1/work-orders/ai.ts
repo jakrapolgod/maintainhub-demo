@@ -31,7 +31,6 @@ import type { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { DomainException } from '../../../errors/domain.exception.js'
 import { withTenantFilter } from '../../../lib/tenant-prisma.js'
 import { requirePermission } from '../../../middleware/require-permission.js'
-import { createAiAdapter } from '../../../lib/ai-client.js'
 import {
   AI_MODEL,
   AI_MAX_TOKENS,
@@ -180,7 +179,7 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      if (!request.server.ai) {
+      if (!request.server.openrouter) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -189,7 +188,7 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const useCase = new DraftWorkOrderFromNLUseCase(
         request.db,
         request.server.prisma,
-        createAiAdapter(request.server.ai),
+        request.server.openrouter,
       )
 
       try {
@@ -241,7 +240,7 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('work-order', 'update'),
     },
     async (request, reply) => {
-      if (!request.server.ai) {
+      if (!request.server.openrouter) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -338,31 +337,31 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const { raw } = reply
       sseHeaders(raw)
 
+      let inputTokens = 0
+      let outputTokens = 0
+
       try {
-        const stream = await request.server.ai.chat.completions.create({
+        const stream = await request.server.openrouter.chat.completions.create({
           model: AI_MODEL,
           max_tokens: AI_MAX_TOKENS,
-          stream: true,
-          stream_options: { include_usage: true },
           messages: [
             { role: 'system', content: ANALYZE_FAILURE_PROMPT },
             { role: 'user', content: lines.join('\n') },
           ],
+          stream: true,
         })
-
-        let inputTokens = 0
-        let outputTokens = 0
 
         for await (const chunk of stream) {
           if (raw.destroyed) break
-          const text = chunk.choices[0]?.delta?.content
-          if (text) writeSse(raw, { type: 'delta', text })
+          const delta = chunk.choices[0]?.delta?.content
+          if (typeof delta === 'string' && delta.length > 0) {
+            writeSse(raw, { type: 'delta', text: delta })
+          }
           if (chunk.usage) {
             inputTokens = chunk.usage.prompt_tokens
             outputTokens = chunk.usage.completion_tokens
           }
         }
-
         writeSse(raw, { type: 'done', usage: { inputTokens, outputTokens } })
       } catch (err) {
         if (!raw.destroyed) {
@@ -398,7 +397,7 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
-      if (!request.server.ai) {
+      if (!request.server.openrouter) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -479,31 +478,31 @@ const aiRoutes: FastifyPluginAsync = async (fastify) => {
       const { raw } = reply
       sseHeaders(raw)
 
+      let inputTokens = 0
+      let outputTokens = 0
+
       try {
-        const stream = await request.server.ai.chat.completions.create({
+        const stream = await request.server.openrouter.chat.completions.create({
           model: AI_MODEL,
           max_tokens: AI_MAX_TOKENS,
-          stream: true,
-          stream_options: { include_usage: true },
           messages: [
             { role: 'system', content: INSTRUCTIONS_PROMPT },
             { role: 'user', content: lines.join('\n') },
           ],
+          stream: true,
         })
-
-        let inputTokens = 0
-        let outputTokens = 0
 
         for await (const chunk of stream) {
           if (raw.destroyed) break
-          const text = chunk.choices[0]?.delta?.content
-          if (text) writeSse(raw, { type: 'delta', text })
+          const delta = chunk.choices[0]?.delta?.content
+          if (typeof delta === 'string' && delta.length > 0) {
+            writeSse(raw, { type: 'delta', text: delta })
+          }
           if (chunk.usage) {
             inputTokens = chunk.usage.prompt_tokens
             outputTokens = chunk.usage.completion_tokens
           }
         }
-
         writeSse(raw, { type: 'done', usage: { inputTokens, outputTokens } })
       } catch (err) {
         if (!raw.destroyed) {

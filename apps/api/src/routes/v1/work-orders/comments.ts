@@ -25,7 +25,7 @@ import type { OASSchema } from './route-helpers.js'
 // ── Zod schema ────────────────────────────────────────────────────────────────
 
 const commentBodySchema = z.object({
-  content:  z.string().trim().min(1, 'Comment cannot be empty').max(2_000),
+  content: z.string().trim().min(1, 'Comment cannot be empty').max(2_000),
   mentions: z.array(z.string().cuid()).optional(),
 })
 
@@ -36,7 +36,7 @@ const commentBodySchema = z.object({
  * Matches any @<cuid> token (cuid is 24+ lowercase alphanumeric chars).
  */
 function extractMentions(content: string): string[] {
-  const re    = /@([a-z0-9]{20,})/g
+  const re = /@([a-z0-9]{20,})/g
   const found: string[] = []
   let m = re.exec(content)
   while (m !== null) {
@@ -51,38 +51,42 @@ type IdParam = { Params: { id: string } }
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 const commentRoutes: FastifyPluginAsync = async (fastify) => {
-
   // ── POST /:id/comments ─────────────────────────────────────────────────────
   fastify.post<IdParam>(
     '/:id/comments',
     {
       schema: {
-        description: 'Post a comment on the work order. Emits a real-time Socket.io event to room wo:{id}.',
-        tags:     ['work-orders'],
+        description:
+          'Post a comment on the work order. Emits a real-time Socket.io event to room wo:{id}.',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['content'],
           properties: {
-            content:  { type: 'string', minLength: 1, maxLength: 2000 },
-            mentions: { type: 'array', items: { type: 'string' },
-                        description: 'User IDs to notify (merged with @mentions in content)' },
+            content: { type: 'string', minLength: 1, maxLength: 2000 },
+            mentions: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'User IDs to notify (merged with @mentions in content)',
+            },
           },
           additionalProperties: false,
         },
         response: {
-          201: { type: 'object',
+          201: {
+            type: 'object',
             properties: {
-              id:        { type: 'string' },
-              body:      { type: 'string' },
-              authorId:  { type: 'string' },
+              id: { type: 'string' },
+              body: { type: 'string' },
+              authorId: { type: 'string' },
               createdAt: { type: 'string' },
             },
           },
-          401: { description: 'Unauthorised',   ...errorBody },
-          403: { description: 'Forbidden',       ...errorBody },
-          404: { description: 'WO not found',   ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'WO not found', ...errorBody },
           422: { description: 'Validation error', ...errorBody },
         },
       } as OASSchema,
@@ -90,13 +94,13 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const { content, mentions: explicitMentions } = commentBodySchema.parse(request.body)
-      const woId     = request.params.id
+      const woId = request.params.id
       const authorId = request.user.sub
       const tenantId = request.user.tid
 
       // Verify work order exists in this tenant
       const wo = await request.db.workOrder.findFirst({
-        where:  { id: woId, deletedAt: null },
+        where: { id: woId, deletedAt: null },
         select: { id: true },
       })
       if (!wo) {
@@ -105,16 +109,16 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Merge explicit mentions with @-markers in body
       const inlineMentions = extractMentions(content)
-      const allMentions    = [...new Set([...(explicitMentions ?? []), ...inlineMentions])]
+      const allMentions = [...new Set([...(explicitMentions ?? []), ...inlineMentions])]
 
       // Persist comment
       const commentId = randomUUID()
-      const comment   = await request.server.prisma.comment.create({
+      const comment = await request.server.prisma.comment.create({
         data: {
-          id:          commentId,
+          id: commentId,
           workOrderId: woId,
           authorId,
-          body:        content,
+          body: content,
         },
         include: { author: { select: { id: true, name: true, avatarUrl: true } } },
       })
@@ -123,34 +127,34 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
       const ua = request.headers['user-agent']
       await writeAuditLog(request.server.prisma, {
         tenantId,
-        userId:     authorId,
-        action:     'ADD_COMMENT',
+        userId: authorId,
+        action: 'ADD_COMMENT',
         entityType: 'WorkOrder',
-        entityId:   woId,
-        after:      { commentId, content: content.slice(0, 200) },
-        ipAddress:  request.ip ?? null,
-        userAgent:  typeof ua === 'string' ? ua : null,
+        entityId: woId,
+        after: { commentId, content: content.slice(0, 200) },
+        ipAddress: request.ip ?? null,
+        userAgent: typeof ua === 'string' ? ua : null,
       })
 
       // Emit real-time event to all clients in the WO room
       const payload = {
         workOrderId: woId,
         comment: {
-          id:              comment.id,
-          body:            comment.body,
-          authorId:        comment.authorId,
-          authorName:      comment.author.name,
+          id: comment.id,
+          body: comment.body,
+          authorId: comment.authorId,
+          authorName: comment.author.name,
           authorAvatarUrl: comment.author.avatarUrl ?? null,
-          mentions:        allMentions,
-          createdAt:       comment.createdAt.toISOString(),
+          mentions: allMentions,
+          createdAt: comment.createdAt.toISOString(),
         },
       }
       request.server.io.to(`wo:${woId}`).emit('comment:added', payload)
 
       return reply.status(201).send({
-        id:        comment.id,
-        body:      comment.body,
-        authorId:  comment.authorId,
+        id: comment.id,
+        body: comment.body,
+        authorId: comment.authorId,
         createdAt: comment.createdAt.toISOString(),
       })
     },
@@ -162,34 +166,32 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         description: 'List all comments for a work order, newest first.',
-        tags:     ['work-orders'],
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         response: {
-          200: { type: 'array',
-            items: { type: 'object' },
-          },
+          200: { type: 'array', items: { type: 'object', additionalProperties: true } },
           401: { description: 'Unauthorised', ...errorBody },
-          404: { description: 'Not found',    ...errorBody },
+          404: { description: 'Not found', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'read'),
     },
     async (request, reply) => {
       const rows = await request.server.prisma.comment.findMany({
-        where:   { workOrderId: request.params.id },
+        where: { workOrderId: request.params.id },
         orderBy: { createdAt: 'desc' },
         include: { author: { select: { id: true, name: true, avatarUrl: true } } },
       })
 
       const items = rows.map((r) => ({
-        id:              r.id,
-        body:            r.body,
-        authorId:        r.authorId,
-        authorName:      r.author.name,
+        id: r.id,
+        body: r.body,
+        authorId: r.authorId,
+        authorName: r.author.name,
         authorAvatarUrl: r.author.avatarUrl ?? null,
-        createdAt:       r.createdAt.toISOString(),
-        updatedAt:       r.updatedAt.toISOString(),
+        createdAt: r.createdAt.toISOString(),
+        updatedAt: r.updatedAt.toISOString(),
       }))
 
       return reply.send(items)

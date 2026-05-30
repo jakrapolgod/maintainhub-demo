@@ -3,22 +3,19 @@ import { DomainException } from '../../errors/domain.exception.js'
 /**
  * AssetNumber — human-readable, tenant-unique asset identifier.
  *
- * Format:  AST-{NNNNNN}  (6 zero-padded decimal digits)
+ * Strict format:  AST-{NNNNNN}  (6 zero-padded decimal digits)
  * Example: AST-000001, AST-042099
- *
- * The number component must be a positive integer from 1 to 999 999.
- * Numbers are assigned by the repository (`AssetRepository.nextAssetNumber`)
- * in monotonically increasing order per tenant.
  */
 export class AssetNumber {
   readonly value: string
 
-  private static readonly FORMAT_REGEX = /^AST-\d{6}$/
+  /** Canonical format: AST- followed by exactly 6 decimal digits. */
+  private static readonly SEQUENTIAL_REGEX = /^AST-\d{6}$/
 
   constructor(value: string) {
-    if (!AssetNumber.FORMAT_REGEX.test(value)) {
+    if (!value || !AssetNumber.SEQUENTIAL_REGEX.test(value)) {
       throw new DomainException(
-        `"${value}" is not a valid AssetNumber — expected format AST-NNNNNN (e.g. AST-000001)`,
+        `"${value}" is not a valid AssetNumber — must match AST-NNNNNN (6-digit zero-padded number)`,
         'INVALID_ASSET_NUMBER',
       )
     }
@@ -37,8 +34,9 @@ export class AssetNumber {
     return new AssetNumber(`AST-${String(n).padStart(6, '0')}`)
   }
 
-  /** Extract the integer sequence component. */
+  /** Extract the integer sequence component. Only valid for AST-NNNNNN format; returns NaN otherwise. */
   get sequence(): number {
+    if (!AssetNumber.SEQUENTIAL_REGEX.test(this.value)) return NaN
     return parseInt(this.value.slice(4), 10)
   }
 

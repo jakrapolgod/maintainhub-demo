@@ -13,8 +13,8 @@
  *   4. Include specific task instructions a technician can follow
  *
  * ## Error handling
- *   - AiError(AI_UNAVAILABLE)  when ANTHROPIC_API_KEY is not configured
- *   - AiError(AI_API_ERROR)    on Anthropic API failure
+ *   - AiError(AI_UNAVAILABLE)  when OPENROUTER_API_KEY is not configured
+ *   - AiError(AI_API_ERROR)    on OpenRouter API failure
  *   - AiError(AI_PARSE_ERROR)  on non-JSON response
  *   - AiError(AI_VALIDATION_ERROR) when JSON doesn't match schema
  */
@@ -104,18 +104,20 @@ export class GeneratePMScheduleFromAssetType {
 
     const userContent = GeneratePMScheduleFromAssetType.buildUserContent(input)
 
-    // ── Call Claude ───────────────────────────────────────────────────────────
+    // ── Call AI ───────────────────────────────────────────────────────────────
     let message
     try {
-      message = await this.ai.messages.create({
+      message = await this.ai.chat.completions.create({
         model: AI_MODEL,
         max_tokens: AI_MAX_TOKENS * 4, // PM schedules need more tokens than WO drafts
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userContent }],
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: userContent },
+        ],
       })
     } catch (err) {
       throw new AiError(
-        `Anthropic API error: ${err instanceof Error ? err.message : String(err)}`,
+        `AI API error: ${err instanceof Error ? err.message : String(err)}`,
         'AI_API_ERROR',
       )
     }

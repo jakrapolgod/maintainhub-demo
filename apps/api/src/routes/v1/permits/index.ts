@@ -113,7 +113,7 @@ const permitRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: requirePermission('work-order', 'update'),
     },
     async (request, reply) => {
-      if (!request.server.ai) {
+      if (!request.server.openrouter) {
         throw new DomainException('AI service not configured', 'AI_UNAVAILABLE', 503)
       }
 
@@ -132,7 +132,7 @@ const permitRoutes: FastifyPluginAsync = async (fastify) => {
       sseHeaders(raw)
 
       try {
-        const stream = await request.server.ai.chat.completions.create({
+        const stream = await request.server.openrouter.chat.completions.create({
           model: AI_MODEL,
           max_tokens: AI_MAX_TOKENS,
           stream: true,

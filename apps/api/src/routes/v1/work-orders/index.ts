@@ -226,15 +226,7 @@ const workOrderRoutes: FastifyPluginAsync = async (fastify) => {
           200: {
             type: 'object',
             properties: {
-              items: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  // Allow all properties through — fast-json-stringify strips
-                  // unlisted fields by default.
-                  additionalProperties: true,
-                },
-              },
+              items: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
               nextCursor: { type: 'string', nullable: true },
             },

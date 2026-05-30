@@ -59,6 +59,27 @@ export type PrismaAssetRowSlim = Prisma.AssetGetPayload<{
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
+// ── List DTO — plain object for API list responses ────────────────────────────
+export interface AssetListDto {
+  id: string
+  assetNumber: string
+  name: string
+  description: string | null
+  categoryId: string
+  parentId: string | null
+  locationId: string | null
+  criticality: string
+  status: string
+  manufacturer: string | null
+  model: string | null
+  serialNumber: string | null
+  installDate: string | null
+  warrantyExpiry: string | null
+  customFields: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
 export class AssetMapper {
   // ── Prisma → Domain ────────────────────────────────────────────────────────
 
@@ -68,6 +89,29 @@ export class AssetMapper {
 
   static toDomainSlim(row: PrismaAssetRowSlim): Asset {
     return Asset.reconstitute(AssetMapper.buildProps(row, []))
+  }
+
+  /** Returns a plain DTO for list responses — no domain objects, safe to JSON-serialize directly. */
+  static toListDto(row: PrismaAssetRowSlim): AssetListDto {
+    return {
+      id: row.id,
+      assetNumber: row.assetNumber,
+      name: row.name,
+      description: row.description ?? null,
+      categoryId: row.categoryId,
+      parentId: row.parentId ?? null,
+      locationId: row.locationId ?? null,
+      criticality: row.criticality,
+      status: row.status,
+      manufacturer: row.manufacturer ?? null,
+      model: row.model ?? null,
+      serialNumber: row.serialNumber ?? null,
+      installDate: row.installDate?.toISOString() ?? null,
+      warrantyExpiry: row.warrantyExpiry?.toISOString() ?? null,
+      customFields: (row.customFields as Record<string, unknown>) ?? {},
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    }
   }
 
   // ── Domain → Prisma ────────────────────────────────────────────────────────
