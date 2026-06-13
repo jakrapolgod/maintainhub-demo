@@ -95,6 +95,7 @@ const subResourceRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: {
             type: 'object',
+            additionalProperties: true,
             properties: {
               data: { type: 'array', items: { type: 'object', additionalProperties: true } },
               pagination: { type: 'object', additionalProperties: true },

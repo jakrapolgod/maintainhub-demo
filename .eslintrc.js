@@ -109,5 +109,9 @@ module.exports = {
     '*.config.mjs',
     '.eslintrc.js',
     'commitlint.config.*',
+    // Prisma seed files are not included in any tsconfig (they run via ts-node,
+    // not the main TS build) — ESLint cannot type-check them.
+    '**/prisma/seed.ts',
+    '**/prisma/seed/**',
   ],
 }

@@ -240,19 +240,30 @@ export class PrismaWorkOrderRepository implements WorkOrderRepository {
       })
     }
 
-    await Promise.all(
-      events.map((event) => {
-        // Use eventId (BaseDomainEvent) when available for idempotency.
-        const jobId = 'eventId' in event ? String(event.eventId) : randomUUID()
+    // Best-effort: if Redis doesn't support Streams (< 5.0) or BullMQ fails,
+    // log the error but don't block the database write from completing.
+    try {
+      await Promise.all(
+        events.map((event) => {
+          // Use eventId (BaseDomainEvent) when available for idempotency.
+          const jobId = 'eventId' in event ? String(event.eventId) : randomUUID()
 
-        return this.queue!.add(
-          event.eventType,
-          // Serialise the full event payload as the job data.
-          JSON.parse(JSON.stringify(event)) as object,
-          { jobId },
-        )
-      }),
-    )
+          return this.queue!.add(
+            event.eventType,
+            // Serialise the full event payload as the job data.
+            JSON.parse(JSON.stringify(event)) as object,
+            { jobId },
+          )
+        }),
+      )
+    } catch (err) {
+      // Redis version < 5.0 doesn't support XADD (Streams). Log and continue.
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[WO repo] Domain event publishing failed (queue unavailable) —',
+        err instanceof Error ? err.message : String(err),
+      )
+    }
   }
 
   /** Build the Prisma WHERE clause from WOFilters + mandatory tenant scoping. */

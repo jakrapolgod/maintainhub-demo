@@ -264,7 +264,7 @@ async function main() {
   const pump = await prisma.asset.create({
     data: {
       tenantId: tenant.id,
-      assetNumber: 'P-101',
+      assetNumber: 'AST-000001',
       name: 'Centrifugal Pump P-101',
       description: 'Process water circulation pump — primary cooling loop',
       categoryId: catPump.id,
@@ -286,7 +286,7 @@ async function main() {
     prisma.asset.create({
       data: {
         tenantId: tenant.id,
-        assetNumber: 'M-101',
+        assetNumber: 'AST-000002',
         name: 'Drive Motor M-101',
         description: '2.2 kW drive motor for pump P-101',
         categoryId: catMotor.id,
@@ -305,7 +305,7 @@ async function main() {
     prisma.asset.create({
       data: {
         tenantId: tenant.id,
-        assetNumber: 'SE-101',
+        assetNumber: 'AST-000003',
         name: 'Mechanical Seal SE-101',
         description: 'Single mechanical seal assembly for P-101',
         categoryId: catPump.id,
@@ -325,7 +325,7 @@ async function main() {
   const ahu = await prisma.asset.create({
     data: {
       tenantId: tenant.id,
-      assetNumber: 'AHU-001',
+      assetNumber: 'AST-000004',
       name: 'Air Handling Unit AHU-001',
       description: 'Roof-mounted AHU serving production floor — 10,000 CFM',
       categoryId: catHVAC.id,
@@ -346,7 +346,7 @@ async function main() {
   const compressor = await prisma.asset.create({
     data: {
       tenantId: tenant.id,
-      assetNumber: 'AC-001',
+      assetNumber: 'AST-000005',
       name: 'Air Compressor AC-001',
       description: 'Screw compressor — instrument air supply',
       categoryId: catCompressor.id,
@@ -580,6 +580,7 @@ async function main() {
       triggerType: TriggerType.CALENDAR,
       calendarRule: {
         frequency: 'monthly',
+        interval: 1,
         dayOfMonth: 1,
         advanceNoticeDays: 3,
       },
@@ -655,6 +656,7 @@ async function main() {
       triggerType: TriggerType.CALENDAR,
       calendarRule: {
         frequency: 'quarterly',
+        interval: 1,
         advanceNoticeDays: 7,
       },
       taskList: [

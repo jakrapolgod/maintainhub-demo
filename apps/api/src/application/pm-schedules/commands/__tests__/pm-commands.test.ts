@@ -77,8 +77,10 @@ function makePrisma() {
     auditLog: { create: jest.fn().mockResolvedValue({}) },
     workOrder: {
       findFirst: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({ id: 'wo-1', woNumber: 'WO-000001' }),
+      create: jest.fn().mockResolvedValue({ id: 'wo-1', woNumber: 'WO-2025-000001' }),
     },
+    $executeRawUnsafe: jest.fn().mockResolvedValue(undefined),
+    $queryRawUnsafe: jest.fn().mockResolvedValue([{ nextval: BigInt(1) }]),
   }
 }
 

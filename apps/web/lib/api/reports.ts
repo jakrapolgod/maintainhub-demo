@@ -67,5 +67,7 @@ export function listMaintenanceReports(
 }
 
 export function listSites(): Promise<SiteStub[]> {
-  return apiFetch<SiteStub[]>('/sites').catch(() => [])
+  return apiFetch<{ sites: SiteStub[] }>('/sites')
+    .then((res) => res.sites)
+    .catch(() => [])
 }

@@ -22,13 +22,20 @@ import type { CommandContext } from './command.types.js'
 const MEDIUM_SLA_HOURS = 24
 
 async function nextWONumber(prisma: PrismaClient, tenantId: string): Promise<string> {
-  const last = await prisma.workOrder.findFirst({
-    where: { tenantId },
-    orderBy: { createdAt: 'desc' },
-    select: { woNumber: true },
-  })
-  const lastNum = last?.woNumber ? Number(last.woNumber.replace(/\D/g, '')) || 0 : 0
-  return `WO-${String(lastNum + 1).padStart(6, '0')}`
+  const year = new Date().getFullYear()
+  const safeTenantId = tenantId.replace(/[^a-z0-9]/g, '')
+  const seqName = `wo_seq_${safeTenantId}_${year}`
+
+  await prisma.$executeRawUnsafe(
+    `CREATE SEQUENCE IF NOT EXISTS "${seqName}" START 1 INCREMENT 1 MINVALUE 1 NO MAXVALUE NO CYCLE`,
+  )
+
+  const rows = await prisma.$queryRawUnsafe<Array<{ nextval: bigint }>>(
+    `SELECT nextval('"${seqName}"')`,
+  )
+
+  const seq = Number(rows[0]?.nextval ?? 1)
+  return `WO-${year}-${String(seq).padStart(6, '0')}`
 }
 
 // ── Command ───────────────────────────────────────────────────────────────────

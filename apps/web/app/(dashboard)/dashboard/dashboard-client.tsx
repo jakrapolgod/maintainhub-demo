@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AssetAttentionWidget } from '@/components/assets/AssetAttentionWidget'
 import { PMComplianceWidget } from '@/components/pm-schedules/PMComplianceWidget'
+import { SitesOverviewWidget } from '@/components/sites/SitesOverviewWidget'
 
 export function DashboardClient() {
   const [mounted, setMounted] = useState(false)
@@ -26,8 +27,9 @@ export function DashboardClient() {
 
   return (
     <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left column: attention + compliance widgets */}
+      {/* Left column: attention + compliance + multi-site widgets */}
       <div className="lg:col-span-1 space-y-4">
+        <SitesOverviewWidget />
         <AssetAttentionWidget limit={5} />
         <PMComplianceWidget />
       </div>

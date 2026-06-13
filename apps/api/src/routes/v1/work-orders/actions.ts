@@ -13,6 +13,7 @@
 import { z } from 'zod'
 import type { FastifyPluginAsync } from 'fastify'
 import { requirePermission } from '../../../middleware/require-permission.js'
+import { DomainException } from '../../../errors/domain.exception.js'
 import { invalidateListCache } from '../../../application/work-orders/queries/index.js'
 import {
   AssignWorkOrderHandler,
@@ -31,7 +32,7 @@ const assignBodySchema = z.object({
 })
 
 const completeBodySchema = z.object({
-  resolution:    z.string().trim().min(10, 'Resolution must be at least 10 characters').max(5_000),
+  resolution: z.string().trim().min(10, 'Resolution must be at least 10 characters').max(5_000),
   failureCodeId: z.string().cuid().optional(),
 })
 
@@ -50,16 +51,59 @@ type IdParam = { Params: { id: string } }
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 const actionRoutes: FastifyPluginAsync = async (fastify) => {
+  // ── POST /:id/open ────────────────────────────────────────────────────────
+  // Transition DRAFT → OPEN (review complete, ready for technicians).
+  // The domain WorkOrder class does not yet have an open() method, so we
+  // apply the status change directly via Prisma (still guarded by auth).
+  fastify.post<IdParam>(
+    '/:id/open',
+    {
+      schema: {
+        description: 'Transition a DRAFT work order to OPEN (reviewed and approved).',
+        tags: ['work-orders'],
+        security: [{ bearerAuth: [] }],
+        params: idParam,
+        response: {
+          204: { type: 'null' },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'Not found', ...errorBody },
+          422: { description: 'Business rule error', ...errorBody },
+        },
+      } as OASSchema,
+      preHandler: requirePermission('work-order', 'update'),
+    },
+    async (request, reply) => {
+      const wo = await request.db.workOrder.findFirst({
+        where: { id: request.params.id, deletedAt: null },
+        select: { id: true, status: true },
+      })
+      if (!wo) return reply.status(404).send({ code: 'NOT_FOUND', message: 'Work order not found' })
+      if (wo.status !== 'DRAFT') {
+        return reply.status(422).send({
+          code: 'INVALID_TRANSITION',
+          message: `Cannot open a work order that is ${wo.status} — must be DRAFT`,
+        })
+      }
+      await request.server.prisma.workOrder.update({
+        where: { id: wo.id },
+        data: { status: 'OPEN', updatedAt: new Date() },
+      })
+      await invalidateListCache(request.server.redis, request.user.tid)
+      return reply.status(204).send()
+    },
+  )
 
   // ── POST /:id/assign ───────────────────────────────────────────────────────
   fastify.post<IdParam>(
     '/:id/assign',
     {
       schema: {
-        description: 'Assign one or more technicians to a work order. Dispatches AssignWorkOrderCommand for each ID.',
-        tags:     ['work-orders'],
+        description:
+          'Assign one or more technicians to a work order. Dispatches AssignWorkOrderCommand for each ID.',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['technicianIds'],
@@ -69,10 +113,9 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
           additionalProperties: false,
         },
         response: {
-          200: { type: 'object',
-                 properties: { assigned: { type: 'integer' } } },
-          401: { description: 'Unauthorised',        ...errorBody },
-          403: { description: 'Forbidden',           ...errorBody },
+          200: { type: 'object', properties: { assigned: { type: 'integer' } } },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
           404: { description: 'WO or user not found', ...errorBody },
           422: { description: 'Business rule error', ...errorBody },
         },
@@ -81,7 +124,7 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const { technicianIds } = assignBodySchema.parse(request.body)
-      const ctx    = buildCmdCtx(request)
+      const ctx = buildCmdCtx(request)
       const woRepo = makeWoRepo(request)
 
       // Dispatch one command per technician in sequence — parallel would cause
@@ -103,23 +146,24 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/start',
     {
       schema: {
-        description: 'Transition a work order from OPEN to IN_PROGRESS. Assigned technicians and privileged roles only.',
-        tags:        ['work-orders'],
-        security:    [{ bearerAuth: [] }],
-        params:      idParam,
+        description:
+          'Transition a work order from OPEN to IN_PROGRESS. Assigned technicians and privileged roles only.',
+        tags: ['work-orders'],
+        security: [{ bearerAuth: [] }],
+        params: idParam,
         response: {
           204: { type: 'null' },
-          401: { description: 'Unauthorised',        ...errorBody },
-          403: { description: 'Forbidden',           ...errorBody },
-          404: { description: 'Not found',           ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'Not found', ...errorBody },
           422: { description: 'Business rule error', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'start'),
     },
     async (request, reply) => {
-      const ctx     = buildCmdCtx(request)
-      const woRepo  = makeWoRepo(request)
+      const ctx = buildCmdCtx(request)
+      const woRepo = makeWoRepo(request)
       const handler = new StartWorkOrderHandler(request.db, request.server.prisma, woRepo)
       await handler.handle({ workOrderId: request.params.id }, ctx)
       await invalidateListCache(request.server.redis, request.user.tid)
@@ -132,39 +176,55 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/complete',
     {
       schema: {
-        description: 'Mark an IN_PROGRESS work order as COMPLETED. Requires a resolution description (≥10 chars).',
-        tags:     ['work-orders'],
+        description:
+          'Mark an IN_PROGRESS work order as COMPLETED. Requires a resolution description (≥10 chars).',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['resolution'],
           properties: {
-            resolution:    { type: 'string', minLength: 10, maxLength: 5000 },
+            resolution: { type: 'string', minLength: 10, maxLength: 5000 },
             failureCodeId: { type: 'string', description: 'ISO 14224 failure code CUID' },
           },
           additionalProperties: false,
         },
         response: {
           204: { type: 'null' },
-          401: { description: 'Unauthorised',        ...errorBody },
-          403: { description: 'Forbidden',           ...errorBody },
-          404: { description: 'Not found',           ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'Not found', ...errorBody },
           422: { description: 'Business rule error', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'complete'),
     },
     async (request, reply) => {
-      const body    = completeBodySchema.parse(request.body)
-      const ctx     = buildCmdCtx(request)
-      const woRepo  = makeWoRepo(request)
+      // ── PTW guard ───────────────────────────────────────────────────────────
+      // A WO with an ACTIVE Permit-to-Work cannot be completed until the PTW is
+      // closed first (safety invariant: site must be handed back before sign-off).
+      const activePtw = await request.db.permitToWork.findFirst({
+        where: { workOrderId: request.params.id, status: 'ACTIVE' },
+        select: { id: true, permitNumber: true },
+      })
+      if (activePtw) {
+        throw new DomainException(
+          `Work order cannot be completed while Permit-to-Work ${activePtw.permitNumber} is ACTIVE. Close the PTW first.`,
+          'PTW_STILL_ACTIVE',
+          422,
+        )
+      }
+
+      const body = completeBodySchema.parse(request.body)
+      const ctx = buildCmdCtx(request)
+      const woRepo = makeWoRepo(request)
       const handler = new CompleteWorkOrderHandler(request.db, request.server.prisma, woRepo)
 
       await handler.handle(
         {
           workOrderId: request.params.id,
-          resolution:  body.resolution,
+          resolution: body.resolution,
           ...(body.failureCodeId !== undefined && { failureCodeId: body.failureCodeId }),
         },
         ctx,
@@ -181,9 +241,9 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         description: 'Pause an IN_PROGRESS work order (e.g. waiting for parts). Requires a reason.',
-        tags:     ['work-orders'],
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['reason'],
@@ -192,9 +252,9 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
         },
         response: {
           204: { type: 'null' },
-          401: { description: 'Unauthorised',        ...errorBody },
-          403: { description: 'Forbidden',           ...errorBody },
-          404: { description: 'Not found',           ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'Not found', ...errorBody },
           422: { description: 'Business rule error', ...errorBody },
         },
       } as OASSchema,
@@ -203,9 +263,9 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       const { reason } = holdBodySchema.parse(request.body)
-      const ctx        = buildCmdCtx(request)
-      const woRepo     = makeWoRepo(request)
-      const handler    = new HoldWorkOrderHandler(request.db, request.server.prisma, woRepo)
+      const ctx = buildCmdCtx(request)
+      const woRepo = makeWoRepo(request)
+      const handler = new HoldWorkOrderHandler(request.db, request.server.prisma, woRepo)
       await handler.handle({ workOrderId: request.params.id, reason }, ctx)
       await invalidateListCache(request.server.redis, request.user.tid)
       return reply.status(204).send()
@@ -217,10 +277,11 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id/cancel',
     {
       schema: {
-        description: 'Cancel a work order. COMPLETED WOs cannot be cancelled. MANAGER and ADMIN only.',
-        tags:     ['work-orders'],
+        description:
+          'Cancel a work order. COMPLETED WOs cannot be cancelled. MANAGER and ADMIN only.',
+        tags: ['work-orders'],
         security: [{ bearerAuth: [] }],
-        params:   idParam,
+        params: idParam,
         body: {
           type: 'object',
           required: ['reason'],
@@ -229,19 +290,19 @@ const actionRoutes: FastifyPluginAsync = async (fastify) => {
         },
         response: {
           204: { type: 'null' },
-          401: { description: 'Unauthorised',             ...errorBody },
-          403: { description: 'Forbidden',                ...errorBody },
-          404: { description: 'Not found',                ...errorBody },
-          422: { description: 'Business rule error',      ...errorBody },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+          404: { description: 'Not found', ...errorBody },
+          422: { description: 'Business rule error', ...errorBody },
         },
       } as OASSchema,
       preHandler: requirePermission('work-order', 'cancel'),
     },
     async (request, reply) => {
       const { reason } = cancelBodySchema.parse(request.body)
-      const ctx        = buildCmdCtx(request)
-      const woRepo     = makeWoRepo(request)
-      const handler    = new CancelWorkOrderHandler(request.db, request.server.prisma, woRepo)
+      const ctx = buildCmdCtx(request)
+      const woRepo = makeWoRepo(request)
+      const handler = new CancelWorkOrderHandler(request.db, request.server.prisma, woRepo)
       await handler.handle({ workOrderId: request.params.id, reason }, ctx)
       await invalidateListCache(request.server.redis, request.user.tid)
       return reply.status(204).send()

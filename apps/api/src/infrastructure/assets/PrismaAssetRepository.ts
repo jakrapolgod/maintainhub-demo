@@ -368,14 +368,23 @@ export class PrismaAssetRepository implements AssetRepository {
       })
     }
 
-    await Promise.all(
-      events.map((event) => {
-        const jobId = 'eventId' in event ? String(event.eventId) : randomUUID()
-        return this.queue!.add(event.eventType, JSON.parse(JSON.stringify(event)) as object, {
-          jobId,
-        })
-      }),
-    )
+    // Best-effort: if Redis doesn't support Streams (< 5.0) log and continue.
+    try {
+      await Promise.all(
+        events.map((event) => {
+          const jobId = 'eventId' in event ? String(event.eventId) : randomUUID()
+          return this.queue!.add(event.eventType, JSON.parse(JSON.stringify(event)) as object, {
+            jobId,
+          })
+        }),
+      )
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[Asset repo] Domain event publishing failed —',
+        err instanceof Error ? err.message : String(err),
+      )
+    }
   }
 
   // ── Private: WHERE clause builder ─────────────────────────────────────────
