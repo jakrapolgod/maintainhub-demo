@@ -7,6 +7,8 @@ import meRoute from './me'
 import workOrderRoutes from './work-orders'
 import pmScheduleRoutes from './pm-schedules/index.js'
 import failureCodeRoutes from './failure-codes/index.js'
+import maintenanceReportRoutes from './reports/maintenance.js'
+import siteRoutes from './sites/index.js'
 
 /**
  * Mounts all v1 API routes under /api/v1.
@@ -22,6 +24,8 @@ const v1Router: FastifyPluginAsync = async (fastify) => {
   void fastify.register(locationRoutes, { prefix: '/locations' })
   void fastify.register(pmScheduleRoutes, { prefix: '/pm-schedules' })
   void fastify.register(failureCodeRoutes, { prefix: '/failure-codes' })
+  void fastify.register(maintenanceReportRoutes, { prefix: '/reports/maintenance' })
+  void fastify.register(siteRoutes, { prefix: '/sites' })
 }
 
 export default v1Router

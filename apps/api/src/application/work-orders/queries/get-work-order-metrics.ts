@@ -111,7 +111,8 @@ export class GetWorkOrderMetricsHandler {
     if (completedRows.length > 0) {
       const totalHours = completedRows.reduce((sum, r) => {
         if (!r.completedAt) return sum
-        return sum + (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000
+        // Clamp to 0 — dirty data can have completedAt before createdAt
+        return sum + Math.max(0, (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000)
       }, 0)
       avgCompletionHours = Math.round((totalHours / completedRows.length) * 100) / 100
     }

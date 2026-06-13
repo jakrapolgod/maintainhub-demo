@@ -198,6 +198,78 @@ export interface WorkOrderCalendar {
   days: CalendarDayEntry[]
 }
 
+// ── GetAssetReliability ───────────────────────────────────────────────────────
+
+export interface AssetReliabilityRow {
+  assetId: string
+  assetNumber: string
+  assetName: string
+  /** Mean Time Between Failures in hours (null when no failures in period). */
+  mtbfHours: number | null
+  /** Mean Time To Repair in hours (null when no completed repairs in period). */
+  mttrHours: number | null
+  /** Uptime percentage over the period (0–100). */
+  availabilityPct: number
+  /** Failures (CORRECTIVE + EMERGENCY WOs) created in the period. */
+  failureCount: number
+  /** Currently open (non-terminal) WOs for this asset. */
+  openWorkOrders: number
+  /** Availability vs. the preceding period of equal length. */
+  trend: 'up' | 'down' | 'flat'
+}
+
+/** One month of a per-asset metric series. Keys of `values` are asset names. */
+export interface MonthlySeriesPoint {
+  /** YYYY-MM */
+  month: string
+  values: Record<string, number | null>
+}
+
+export interface VolumeByTypePoint {
+  /** YYYY-MM */
+  month: string
+  CORRECTIVE: number
+  PREVENTIVE: number
+  INSPECTION: number
+  EMERGENCY: number
+}
+
+export interface AssetReliabilityResult {
+  from: string
+  to: string
+  assets: AssetReliabilityRow[]
+  /** Monthly MTBF per asset for the top assets by failure count. */
+  mtbfSeries: MonthlySeriesPoint[]
+  /** Monthly MTTR per asset for the top assets by failure count. */
+  mttrSeries: MonthlySeriesPoint[]
+  volumeByType: VolumeByTypePoint[]
+}
+
+// ── GetCostBreakdown ──────────────────────────────────────────────────────────
+
+export interface CostMix {
+  /** In-house labor cost (total labor minus contractor labor). */
+  labor: number
+  parts: number
+  /** Labor entries booked by users with the CONTRACTOR role. */
+  contractor: number
+}
+
+export interface MonthlyCostByCategory {
+  /** YYYY-MM */
+  month: string
+  /** Keys are ISO 14224 failure-code categories ('Uncategorised' when absent). */
+  categories: Record<string, number>
+}
+
+export interface CostBreakdownResult {
+  from: string
+  to: string
+  costMix: CostMix
+  monthlyByCategory: MonthlyCostByCategory[]
+  totalCost: number
+}
+
 // ── Redis cache helpers ───────────────────────────────────────────────────────
 
 const LIST_TTL_SECONDS = 30

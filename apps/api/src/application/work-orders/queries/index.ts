@@ -12,6 +12,13 @@ export type {
   WorkOrderSummary,
   ListWorkOrdersResult,
   WorkOrderMetrics,
+  AssetReliabilityRow,
+  MonthlySeriesPoint,
+  VolumeByTypePoint,
+  AssetReliabilityResult,
+  CostMix,
+  MonthlyCostByCategory,
+  CostBreakdownResult,
   CalendarWorkOrder,
   PMDueEntry,
   CalendarDayEntry,
@@ -40,3 +47,9 @@ export { GetWorkOrderMetricsHandler } from './get-work-order-metrics.js'
 
 export type { GetWorkOrderCalendarQuery } from './get-work-order-calendar.js'
 export { GetWorkOrderCalendarHandler } from './get-work-order-calendar.js'
+
+export type { GetAssetReliabilityQuery } from './get-asset-reliability.js'
+export { GetAssetReliabilityHandler } from './get-asset-reliability.js'
+
+export type { GetCostBreakdownQuery } from './get-cost-breakdown.js'
+export { GetCostBreakdownHandler } from './get-cost-breakdown.js'

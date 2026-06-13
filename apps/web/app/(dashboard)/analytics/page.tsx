@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -23,55 +23,122 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  useAssetReliability,
+  useCostBreakdown,
+  usePMCompliance,
+  useAnalyticsMetrics,
+} from '@/hooks/useAnalytics'
+import { useMe } from '@/hooks/use-auth'
+import { ApiError } from '@/lib/api'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const ASSETS = ['Pump A', 'HVAC-1', 'Conveyor', 'Chiller', 'Generator']
 const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6']
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b']
-
-const mtbf = MONTHS.map((m, i) => ({
-  m,
-  ...Object.fromEntries(ASSETS.map((a, j) => [a, (300 + j * 40 + Math.sin(i + j) * 30) | 0])),
-}))
-const mttr = MONTHS.map((m, i) => ({
-  m,
-  ...Object.fromEntries(ASSETS.map((a, j) => [a, (4 + j + Math.cos(i + j) * 1.5) | 0])),
-}))
-const volume = MONTHS.map((m, i) => ({
-  m,
-  CORRECTIVE: 8 + (i % 4),
-  PREVENTIVE: 12 - (i % 3),
-  INSPECTION: 5 + (i % 2),
-}))
-const costPie = [
-  { name: 'Labor', value: 42000 },
-  { name: 'Parts', value: 28000 },
-  { name: 'Contractor', value: 15000 },
+const MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ]
-const costBar = MONTHS.map((m, i) => ({
-  m,
-  Mechanical: 3000 + i * 200,
-  Electrical: 2000 + i * 150,
-  HVAC: 1500 + i * 100,
-  Civil: 800 + i * 50,
-}))
-const reliability = [
-  { asset: 'HVAC-1', mtbf: 320, mttr: 6.2, avail: 98.1, openWOs: 2, trend: '↑' },
-  { asset: 'Conveyor', mtbf: 210, mttr: 8.4, avail: 96.7, openWOs: 5, trend: '↓' },
-  { asset: 'Pump A', mtbf: 480, mttr: 4.1, avail: 99.1, openWOs: 1, trend: '↑' },
-  { asset: 'Chiller', mtbf: 180, mttr: 11.2, avail: 93.8, openWOs: 7, trend: '↓' },
-  { asset: 'Generator', mtbf: 540, mttr: 3.8, avail: 99.3, openWOs: 0, trend: '→' },
-].sort((a, b) => a.avail - b.avail)
 
 const tip = { contentStyle: { fontSize: 11 }, wrapperStyle: { zIndex: 50 } }
 
 type Period = 'week' | 'month' | 'quarter'
+type Range = '3m' | '6m' | '12m'
+
+/** '2026-01' → 'Jan' */
+function monthLabel(yyyyMm: string): string {
+  const m = Number(yyyyMm.slice(5, 7))
+  return MONTH_NAMES[m - 1] ?? yyyyMm
+}
+
+function fmtMoney(v: unknown): string {
+  return `$${Number(v).toLocaleString()}`
+}
 
 export default function AnalyticsPage() {
   const [open, setOpen] = useState(false)
   const [period, setPeriod] = useState<Period>('month')
+  const [range, setRange] = useState<Range>('12m')
   const [report, setReport] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const me = useMe()
+
+  // Stable dateFrom so the query key (and server cache key) doesn't change on
+  // every render — anchored to the first day of the month, N months back.
+  const filters = useMemo(() => {
+    const months = range === '3m' ? 2 : range === '6m' ? 5 : 11
+    const now = new Date()
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months, 1))
+    return { dateFrom: from.toISOString() }
+  }, [range])
+
+  const reliability = useAssetReliability(filters)
+  const costs = useCostBreakdown(filters)
+  const compliance = usePMCompliance()
+  const metrics = useAnalyticsMetrics(filters)
+
+  // ── Chart data projections ──────────────────────────────────────────────────
+  const seriesAssets = useMemo(
+    () => Object.keys(reliability.data?.mtbfSeries[0]?.values ?? {}),
+    [reliability.data],
+  )
+
+  const mtbfRows = useMemo(
+    () =>
+      (reliability.data?.mtbfSeries ?? []).map((p) => ({ m: monthLabel(p.month), ...p.values })),
+    [reliability.data],
+  )
+  const mttrRows = useMemo(
+    () =>
+      (reliability.data?.mttrSeries ?? []).map((p) => ({ m: monthLabel(p.month), ...p.values })),
+    [reliability.data],
+  )
+  const volumeRows = useMemo(
+    () => (reliability.data?.volumeByType ?? []).map((p) => ({ ...p, m: monthLabel(p.month) })),
+    [reliability.data],
+  )
+
+  const costPie = useMemo(() => {
+    const mix = costs.data?.costMix
+    if (!mix) return []
+    return [
+      { name: 'Labor', value: mix.labor },
+      { name: 'Parts', value: mix.parts },
+      { name: 'Contractor', value: mix.contractor },
+    ].filter((s) => s.value > 0)
+  }, [costs.data])
+
+  const costCategories = useMemo(() => {
+    const keys = new Set<string>()
+    for (const m of costs.data?.monthlyByCategory ?? []) {
+      for (const k of Object.keys(m.categories)) keys.add(k)
+    }
+    return [...keys].sort()
+  }, [costs.data])
+
+  const costRows = useMemo(
+    () =>
+      (costs.data?.monthlyByCategory ?? []).map((p) => ({
+        m: monthLabel(p.month),
+        ...p.categories,
+      })),
+    [costs.data],
+  )
+
+  const tableRows = reliability.data?.assets ?? []
+
+  const isForbidden = reliability.error instanceof ApiError && reliability.error.status === 403
 
   async function generateReport() {
     setReport('')
@@ -80,7 +147,15 @@ export default function AnalyticsPage() {
       const res = await fetch('/api/ai/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period, data: {} }),
+        body: JSON.stringify({
+          period,
+          data: {
+            metrics: metrics.data ?? null,
+            reliability: reliability.data?.assets ?? [],
+            costMix: costs.data?.costMix ?? null,
+            pmCompliancePct: compliance.data?.overallCompliancePct ?? null,
+          },
+        }),
       })
       const reader = res.body!.getReader()
       const decoder = new TextDecoder()
@@ -94,56 +169,166 @@ export default function AnalyticsPage() {
     }
   }
 
+  if (isForbidden) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <p className="text-sm text-muted-foreground">
+          Analytics is available to Managers and Admins only.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full overflow-auto">
-      <div className="border-b bg-background px-6 py-4 shrink-0 flex items-center justify-between">
+      <div className="border-b bg-background px-6 py-4 shrink-0 flex items-center justify-between print:hidden">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">12-month reliability & cost overview</p>
+          <p className="text-sm text-muted-foreground">Reliability & cost overview</p>
         </div>
-        <Button size="sm" onClick={() => setOpen(true)}>
-          Generate AI Report
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={range} onValueChange={(v) => setRange(v as Range)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3m">Last 3 months</SelectItem>
+              <SelectItem value="6m">Last 6 months</SelectItem>
+              <SelectItem value="12m">Last 12 months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="outline" onClick={() => window.print()}>
+            Export ISO report
+          </Button>
+          <Button size="sm" onClick={() => setOpen(true)}>
+            Generate AI Report
+          </Button>
+        </div>
+      </div>
+
+      {/* ── ISO 9001 controlled-document header (print only) ── */}
+      <div className="hidden print:block border-b px-6 py-4 text-sm">
+        <div className="flex justify-between font-semibold">
+          <span>MaintainHub — Maintenance Performance Report</span>
+          <span>Doc ID: MH-RPT-ANL-001 · Rev A</span>
+        </div>
+        <div className="flex justify-between text-xs mt-1">
+          <span>
+            Reporting period:{' '}
+            {reliability.data
+              ? `${reliability.data.from.slice(0, 10)} to ${reliability.data.to.slice(0, 10)}`
+              : '—'}
+          </span>
+          <span>
+            Generated: {new Date().toISOString().slice(0, 10)} by {me.data?.name ?? '—'}
+          </span>
+        </div>
+        <p className="text-xs mt-2 text-muted-foreground">
+          Purpose &amp; scope: monitoring, measurement, analysis and evaluation of maintenance
+          performance per ISO 9001:2015 clauses 9.1.1 / 9.1.3. Source records: work orders, PM
+          schedules and inventory transactions in MaintainHub.
+        </p>
       </div>
 
       <div className="p-6 space-y-8">
+        {/* ── Section 0: KPI Summary ── */}
+        <section>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                label: 'PM Compliance',
+                value:
+                  compliance.data !== undefined ? `${compliance.data.overallCompliancePct}%` : null,
+                sub:
+                  compliance.data !== undefined
+                    ? `${compliance.data.fullyCompliant}/${compliance.data.totalSchedules} schedules fully compliant`
+                    : '',
+              },
+              {
+                label: 'MTTR',
+                value: metrics.data !== undefined ? `${metrics.data.mttr ?? '—'} h` : null,
+                sub: 'mean time to repair',
+              },
+              {
+                label: 'Overdue WOs',
+                value: metrics.data !== undefined ? String(metrics.data.overdueCount) : null,
+                sub: 'past SLA, not closed',
+              },
+              {
+                label: 'Total Cost',
+                value: costs.data !== undefined ? fmtMoney(costs.data.totalCost) : null,
+                sub: 'labor + parts + contractor',
+              },
+            ].map(({ label, value, sub }) => (
+              <div key={label} className="rounded-xl border bg-card p-4">
+                <p className="text-xs font-medium text-muted-foreground">{label}</p>
+                {value === null ? (
+                  <Skeleton className="h-7 w-20 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold mt-1">{value}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-1">{sub}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ── Section 1: KPI Trends ── */}
         <section>
           <h2 className="text-base font-semibold mb-4">KPI Trends</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[
-              { label: 'MTBF (hrs)', data: mtbf, unit: 'h' },
-              { label: 'MTTR (hrs)', data: mttr, unit: 'h' },
+              { label: 'MTBF (hrs)', data: mtbfRows, unit: 'h' },
+              { label: 'MTTR (hrs)', data: mttrRows, unit: 'h' },
             ].map(({ label, data, unit }) => (
               <div key={label} className="rounded-xl border bg-card p-4">
                 <p className="text-xs font-medium text-muted-foreground mb-2">{label}</p>
-                <ResponsiveContainer width="100%" height={140}>
-                  <LineChart data={data} {...tip}>
-                    <XAxis dataKey="m" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} unit={unit} width={36} />
-                    <Tooltip {...tip} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-                    {ASSETS.map((a, i) => (
-                      <Line key={a} dataKey={a} stroke={COLORS[i]!} dot={false} strokeWidth={1.5} />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                {reliability.isPending ? (
+                  <Skeleton className="h-[140px] w-full" />
+                ) : seriesAssets.length === 0 ? (
+                  <EmptyChart />
+                ) : (
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart data={data} {...tip}>
+                      <XAxis dataKey="m" tick={{ fontSize: 10 }} />
+                      <YAxis tick={{ fontSize: 10 }} unit={unit} width={36} />
+                      <Tooltip {...tip} />
+                      <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                      {seriesAssets.map((a, i) => (
+                        <Line
+                          key={a}
+                          dataKey={a}
+                          stroke={COLORS[i % COLORS.length]!}
+                          dot={false}
+                          strokeWidth={1.5}
+                          connectNulls
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             ))}
 
             <div className="rounded-xl border bg-card p-4 lg:col-span-2">
               <p className="text-xs font-medium text-muted-foreground mb-2">WO Volume by Type</p>
-              <ResponsiveContainer width="100%" height={140}>
-                <BarChart data={volume} {...tip}>
-                  <XAxis dataKey="m" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={28} />
-                  <Tooltip {...tip} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-                  {['CORRECTIVE', 'PREVENTIVE', 'INSPECTION'].map((t, i) => (
-                    <Bar key={t} dataKey={t} stackId="a" fill={COLORS[i]!} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              {reliability.isPending ? (
+                <Skeleton className="h-[140px] w-full" />
+              ) : volumeRows.length === 0 ? (
+                <EmptyChart />
+              ) : (
+                <ResponsiveContainer width="100%" height={140}>
+                  <BarChart data={volumeRows} {...tip}>
+                    <XAxis dataKey="m" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} width={28} />
+                    <Tooltip {...tip} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                    {['CORRECTIVE', 'PREVENTIVE', 'INSPECTION', 'EMERGENCY'].map((t, i) => (
+                      <Bar key={t} dataKey={t} stackId="a" fill={COLORS[i % COLORS.length]!} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </section>
@@ -154,46 +339,58 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-xl border bg-card p-4">
               <p className="text-xs font-medium text-muted-foreground mb-2">Cost Mix</p>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={costPie}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100) | 0}%`}
-                    labelLine={false}
-                  >
-                    {costPie.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i]!} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => `$${Number(v).toLocaleString()}`} {...tip} />
-                </PieChart>
-              </ResponsiveContainer>
+              {costs.isPending ? (
+                <Skeleton className="h-[200px] w-full" />
+              ) : costPie.length === 0 ? (
+                <EmptyChart height={200} />
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={costPie}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100) | 0}%`}
+                      labelLine={false}
+                    >
+                      {costPie.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]!} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={fmtMoney} {...tip} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             <div className="rounded-xl border bg-card p-4">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                Monthly Cost by Asset Category
+                Monthly Cost by Failure Category
               </p>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={costBar} {...tip}>
-                  <XAxis dataKey="m" tick={{ fontSize: 10 }} />
-                  <YAxis
-                    tick={{ fontSize: 10 }}
-                    width={40}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip formatter={(v) => `$${Number(v).toLocaleString()}`} {...tip} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
-                  {['Mechanical', 'Electrical', 'HVAC', 'Civil'].map((c, i) => (
-                    <Bar key={c} dataKey={c} stackId="b" fill={COLORS[i]!} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
+              {costs.isPending ? (
+                <Skeleton className="h-[200px] w-full" />
+              ) : costRows.length === 0 ? (
+                <EmptyChart height={200} />
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={costRows} {...tip}>
+                    <XAxis dataKey="m" tick={{ fontSize: 10 }} />
+                    <YAxis
+                      tick={{ fontSize: 10 }}
+                      width={40}
+                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip formatter={fmtMoney} {...tip} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                    {costCategories.map((c, i) => (
+                      <Bar key={c} dataKey={c} stackId="b" fill={COLORS[i % COLORS.length]!} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </section>
@@ -207,40 +404,87 @@ export default function AnalyticsPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
-                  {['Asset', 'MTBF (h)', 'MTTR (h)', 'Availability %', 'Open WOs', 'Trend'].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    'Asset',
+                    'MTBF (h)',
+                    'MTTR (h)',
+                    'Availability %',
+                    'Failures',
+                    'Open WOs',
+                    'Trend',
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {reliability.map((r) => (
-                  <tr key={r.asset} className="border-b last:border-0 hover:bg-muted/20">
-                    <td className="px-4 py-3 font-medium">{r.asset}</td>
-                    <td className="px-4 py-3">{r.mtbf}</td>
-                    <td className="px-4 py-3">{r.mttr}</td>
-                    <td
-                      className={`px-4 py-3 font-medium ${r.avail >= 99 ? 'text-green-600' : r.avail >= 97 ? 'text-amber-600' : 'text-red-600'}`}
-                    >
-                      {r.avail}%
-                    </td>
-                    <td className="px-4 py-3">{r.openWOs}</td>
-                    <td
-                      className={`px-4 py-3 text-lg ${r.trend === '↑' ? 'text-green-600' : r.trend === '↓' ? 'text-red-600' : 'text-muted-foreground'}`}
-                    >
-                      {r.trend}
+                {reliability.isPending ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-3">
+                      <Skeleton className="h-24 w-full" />
                     </td>
                   </tr>
-                ))}
+                ) : tableRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                      No failures recorded in this period.
+                    </td>
+                  </tr>
+                ) : (
+                  tableRows.map((r) => (
+                    <tr key={r.assetId} className="border-b last:border-0 hover:bg-muted/20">
+                      <td className="px-4 py-3 font-medium">
+                        {r.assetName}
+                        <span className="ml-2 text-xs text-muted-foreground">{r.assetNumber}</span>
+                      </td>
+                      <td className="px-4 py-3">{r.mtbfHours ?? '—'}</td>
+                      <td className="px-4 py-3">{r.mttrHours ?? '—'}</td>
+                      <td
+                        className={`px-4 py-3 font-medium ${r.availabilityPct >= 99 ? 'text-green-600' : r.availabilityPct >= 97 ? 'text-amber-600' : 'text-red-600'}`}
+                      >
+                        {r.availabilityPct}%
+                      </td>
+                      <td className="px-4 py-3">{r.failureCount}</td>
+                      <td className="px-4 py-3">{r.openWorkOrders}</td>
+                      <td
+                        className={`px-4 py-3 text-lg ${r.trend === 'up' ? 'text-green-600' : r.trend === 'down' ? 'text-red-600' : 'text-muted-foreground'}`}
+                      >
+                        {r.trend === 'up' ? '↑' : r.trend === 'down' ? '↓' : '→'}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
+        </section>
+
+        {/* ── ISO 9001 approval block (print only) ── */}
+        <section className="hidden print:block pt-8">
+          <table className="w-full text-sm border">
+            <tbody>
+              <tr>
+                {['Prepared by', 'Reviewed by', 'Approved by'].map((role) => (
+                  <td key={role} className="border p-4 align-top w-1/3">
+                    <p className="text-xs font-medium">{role}</p>
+                    <p className="mt-8 border-t pt-1 text-xs text-muted-foreground">
+                      Name / Signature / Date
+                    </p>
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            Controlled document — retained as documented information per ISO 9001:2015 clause 7.5.3.
+            MTTR/MTBF figures depend on technicians recording start and completion times on work
+            orders.
+          </p>
         </section>
       </div>
 
@@ -269,7 +513,7 @@ export default function AnalyticsPage() {
               <>
                 <div className="rounded-md border bg-muted/30 p-4 max-h-80 overflow-y-auto text-sm space-y-0.5 font-mono">
                   {report.split('\n').map((line, i) => (
-                    <p key={i}>{line || ' '}</p>
+                    <p key={i}>{line || ' '}</p>
                   ))}
                 </div>
                 <Button
@@ -284,6 +528,17 @@ export default function AnalyticsPage() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function EmptyChart({ height = 140 }: { height?: number }) {
+  return (
+    <div
+      className="flex items-center justify-center text-xs text-muted-foreground"
+      style={{ height }}
+    >
+      No data for this period.
     </div>
   )
 }

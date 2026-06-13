@@ -7,9 +7,563 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ENUMS
-// ══════════════════════════════════════════════════════════════════════════════
+model Tenant {
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  plan             Plan              @default(STARTER)
+  isActive         Boolean           @default(true)
+  /// Tenant-level config: logo, timezone, currency, SLA rules, etc.
+  settings         Json              @default("{}")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assets           Asset[]
+  categories       AssetCategory[]
+  attachments      Attachment[]
+  auditLogs        AuditLog[]
+  ContractorToken  ContractorToken[]
+  integrations     Integration[]
+  invitations      Invitation[]
+  locations        Location[]
+  pmSchedules      PMSchedule[]
+  parts            Part[]
+  permitsToWork    PermitToWork[]
+  reports          Report[]
+  Site             Site[]
+  users            User[]
+  webhookEndpoints WebhookEndpoint[]
+  workOrders       WorkOrder[]
+}
+
+model User {
+  id              String         @id @default(cuid())
+  tenantId        String
+  email           String
+  name            String
+  passwordHash    String
+  role            Role           @default(VIEWER)
+  isActive        Boolean        @default(true)
+  avatarUrl       String?
+  phone           String?
+  jobTitle        String?
+  /// Technician skill tags used for PM schedule assignment matching
+  skills          String[]
+  lastLoginAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  attachments     Attachment[]
+  auditLogs       AuditLog[]
+  comments        Comment[]
+  sentInvitations Invitation[]   @relation("InvitationSender")
+  laborEntries    LaborEntry[]
+  refreshTokens   RefreshToken[]
+  reportsGenerated Report[]
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  UserSite        UserSite[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@index([tenantId, isActive])
+}
+
+/// Stores hashed refresh tokens — never stores plaintext tokens
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  /// SHA-256 hash of the actual token value
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Physical or virtual location in the facility hierarchy (up to 5 levels deep)
+model Location {
+  id        String     @id @default(cuid())
+  tenantId  String
+  code      String
+  name      String
+  parentId  String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  assets    Asset[]
+  parent    Location?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  children  Location[] @relation("LocationHierarchy")
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+model AssetCategory {
+  id        String   @id @default(cuid())
+  tenantId  String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  assets    Asset[]
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Asset {
+  id             String        @id @default(cuid())
+  tenantId       String
+  assetNumber    String
+  name           String
+  description    String?
+  categoryId     String
+  /// Self-reference for hierarchy: Plant > Building > System > Equipment > Component
+  parentId       String?
+  locationId     String?
+  criticality    Criticality   @default(C)
+  status         AssetStatus   @default(OPERATIONAL)
+  manufacturer   String?
+  model          String?
+  serialNumber   String?
+  installDate    DateTime?
+  warrantyExpiry DateTime?
+  purchaseCost   Decimal?      @db.Decimal(14, 2)
+  /// Unique QR code identifier — printed on physical asset tags
+  qrCode         String?       @unique
+  /// Extensible per-category metadata (custom fields)
+  customFields   Json          @default("{}")
+  deletedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  siteId         String?
+  category       AssetCategory @relation(fields: [categoryId], references: [id])
+  location       Location?     @relation(fields: [locationId], references: [id])
+  parent         Asset?        @relation("AssetHierarchy", fields: [parentId], references: [id])
+  children       Asset[]       @relation("AssetHierarchy")
+  Site           Site?         @relation(fields: [siteId], references: [id])
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+  attachments    Attachment[]
+  pmSchedules    PMSchedule[]
+  workOrders     WorkOrder[]
+
+  @@unique([tenantId, assetNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, criticality])
+  @@index([parentId])
+  @@index([locationId])
+  @@index([categoryId])
+  @@index([tenantId, siteId])
+}
+
+model WorkOrder {
+  id             String        @id @default(cuid())
+  tenantId       String
+  /// Auto-generated per-tenant: WO-2024-000001 (handled in application layer)
+  woNumber       String
+  title          String
+  description    String?
+  type           WOType        @default(CORRECTIVE)
+  priority       Priority      @default(MEDIUM)
+  status         WOStatus      @default(DRAFT)
+  assetId        String
+  /// Sub-work-order support: parent WO cannot complete until all children complete
+  parentId       String?
+  /// Denormalized array of assigned User IDs — GIN index required for ANY() queries
+  /// See: infrastructure/db/migrations/add_work_order_assignees_gin_index.sql
+  assigneeIds    String[]
+  dueDate        DateTime?
+  slaDeadline    DateTime?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  failureCodeId  String?
+  resolution     String?
+  /// Denormalized totals updated when labor entries / part usages change
+  totalLaborCost Decimal?      @db.Decimal(12, 2)
+  totalPartsCost Decimal?      @db.Decimal(12, 2)
+  createdById    String
+  deletedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  siteId         String?
+  attachments    Attachment[]
+  comments       Comment[]
+  laborEntries   LaborEntry[]
+  partUsages     PartUsage[]
+  permitsToWork  PermitToWork?
+  asset          Asset         @relation(fields: [assetId], references: [id])
+  failureCode    FailureCode?  @relation(fields: [failureCodeId], references: [id])
+  parent         WorkOrder?    @relation("WorkOrderHierarchy", fields: [parentId], references: [id])
+  children       WorkOrder[]   @relation("WorkOrderHierarchy")
+  Site           Site?         @relation(fields: [siteId], references: [id])
+  tenant         Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, woNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, assetId])
+  @@index([tenantId, priority, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, dueDate])
+  @@index([parentId])
+  @@index([createdById])
+  @@index([failureCodeId])
+  @@index([tenantId, siteId])
+}
+
+model LaborEntry {
+  id           String    @id @default(cuid())
+  workOrderId  String
+  technicianId String
+  date         DateTime  @db.Date
+  hours        Decimal   @db.Decimal(5, 2)
+  ratePerHour  Decimal   @db.Decimal(10, 2)
+  /// Denormalized: hours × ratePerHour — avoids recalculation on every read
+  totalCost    Decimal   @db.Decimal(12, 2)
+  description  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  technician   User      @relation(fields: [technicianId], references: [id])
+  workOrder    WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([technicianId])
+  @@index([date])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  workOrderId String
+  authorId    String
+  body        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  author      User      @relation(fields: [authorId], references: [id])
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([authorId])
+}
+
+model Part {
+  id            String      @id @default(cuid())
+  tenantId      String
+  partNumber    String
+  name          String
+  description   String?
+  /// Current on-hand quantity
+  quantity      Int         @default(0)
+  /// Quantity reserved for open work orders — quantity - reservedQty = available
+  reservedQty   Int         @default(0)
+  minimumStock  Int         @default(0)
+  unitCost      Decimal     @db.Decimal(10, 2)
+  storeLocation String?
+  customFields  Json        @default("{}")
+  deletedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  usages        PartUsage[]
+
+  @@unique([tenantId, partNumber])
+  @@index([tenantId])
+  @@index([tenantId, quantity])
+}
+
+model PartUsage {
+  id          String    @id @default(cuid())
+  workOrderId String
+  partId      String
+  quantity    Int
+  /// Cost snapshot at time of use — insulated from future price changes
+  unitCost    Decimal   @db.Decimal(10, 2)
+  totalCost   Decimal   @db.Decimal(12, 2)
+  usedAt      DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  part        Part      @relation(fields: [partId], references: [id])
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId])
+  @@index([partId])
+}
+
+model Attachment {
+  id           String     @id @default(cuid())
+  tenantId     String
+  workOrderId  String?
+  assetId      String?
+  uploadedById String
+  fileName     String
+  /// File size in bytes — enforced ≤ 20 MB at API layer
+  fileSize     Int
+  mimeType     String
+  /// MinIO object key — combine with MINIO_ENDPOINT to build presigned URL
+  storageKey   String     @unique
+  /// MinIO key for auto-generated thumbnail (images only)
+  thumbnailKey String?
+  createdAt    DateTime   @default(now())
+  asset        Asset?     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id])
+  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([workOrderId])
+  @@index([assetId])
+  @@index([uploadedById])
+}
+
+model PMSchedule {
+  id             String      @id @default(cuid())
+  tenantId       String
+  assetId        String
+  title          String
+  description    String?
+  triggerType    TriggerType
+  /// CALENDAR: { frequency, dayOfMonth?, dayOfWeek?, advanceNoticeDays }
+  calendarRule   Json?
+  /// METER: { meterField, interval, tolerance, currentReading }
+  meterRule      Json?
+  /// CONDITION: { sensorId, metric, operator, threshold, durationMinutes, cooldownMinutes }
+  conditionRule  Json?
+  /// Array of Task objects — validated as TaskSchema[] in application layer
+  taskList       Json        @default("[]")
+  estimatedHours Decimal?    @db.Decimal(6, 2)
+  requiredSkills String[]
+  isActive       Boolean     @default(true)
+  lastTriggered  DateTime?
+  nextDue        DateTime?
+  createdById    String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  asset          Asset       @relation(fields: [assetId], references: [id])
+  tenant         Tenant      @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, isActive, nextDue])
+  @@index([assetId])
+}
+
+/// Global (cross-tenant) ISO 14224 failure taxonomy
+model FailureCode {
+  id         String      @id @default(cuid())
+  /// e.g. MECH-001
+  code       String      @unique
+  name       String
+  /// ISO 14224 category: Mechanical | Electrical | Instrumentation | …
+  category   String
+  system     String?
+  /// Failure mode description for technician reference
+  notes      String?
+  workOrders WorkOrder[]
+
+  @@index([category])
+}
+
+/// A tenant-owned HTTPS endpoint that receives signed domain-event payloads.
+model WebhookEndpoint {
+  id              String            @id @default(cuid())
+  tenantId        String
+  url             String
+  /// HMAC-SHA256 key stored in plaintext (encrypt at rest via KMS in prod).
+  secret          String
+  /// Serialised WebhookEventType[]; stored as String[] for portability.
+  events          String[]
+  isActive        Boolean           @default(false)
+  failureCount    Int               @default(0)
+  lastDeliveredAt DateTime?
+  createdById     String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deliveries      WebhookDelivery[]
+  tenant          Tenant            @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+/// A single HTTP delivery attempt for a domain event notification.
+model WebhookDelivery {
+  id                String          @id @default(cuid())
+  webhookEndpointId String
+  /// WebhookEventType discriminant stored as string.
+  event             String
+  payload           Json
+  /// PENDING | DELIVERED | FAILED
+  status            String          @default("PENDING")
+  attemptCount      Int             @default(0)
+  lastAttemptAt     DateTime?
+  responseCode      Int?
+  responseBody      String?
+  nextRetryAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  endpoint          WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id])
+
+  @@index([status, nextRetryAt])
+  @@index([webhookEndpointId])
+}
+
+/// External system connection (Zapier, Slack, Azure AD, etc.).
+model Integration {
+  id          String    @id @default(cuid())
+  tenantId    String
+  /// Provider discriminant: zapier | make | slack | google_workspace | azure_ad
+  provider    String
+  /// Encrypted configuration blob (AEAD encryption by the infrastructure layer).
+  config      Json      @default("{}")
+  isActive    Boolean   @default(false)
+  lastSyncAt  DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+}
+
+/// Immutable audit trail — application layer must never allow UPDATE or DELETE
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  /// Null for system-generated events (scheduled jobs, automated triggers)
+  userId     String?
+  /// Screaming snake_case action codes: CREATE_WORK_ORDER, UPDATE_WO_STATUS, …
+  action     String
+  entityType String
+  entityId   String
+  /// Full snapshot of the entity before the mutation
+  before     Json?
+  /// Full snapshot of the entity after the mutation
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, userId])
+  @@index([tenantId, action])
+}
+
+/// Tracks each invitation email sent to an external address.
+/// tokenHash = SHA-256(jwt) for revocation without keeping the plaintext token.
+/// acceptedAt is null while pending; set when the invitee creates their account.
+/// Re-inviting the same email revokes any existing pending invitations first.
+model Invitation {
+  id          String    @id @default(cuid())
+  tenantId    String
+  email       String
+  role        Role      @default(TECHNICIAN)
+  /// SHA-256 hash of the signed JWT — stored so we can revoke without keeping
+  /// the plaintext token in the database
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  createdAt   DateTime  @default(now())
+  invitedBy   User      @relation("InvitationSender", fields: [invitedById], references: [id])
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, email])
+  @@index([tokenHash])
+  @@index([tenantId, acceptedAt])
+  @@index([expiresAt])
+}
+
+/// Permit-to-Work record — safety authorisation for high-risk maintenance tasks.
+model PermitToWork {
+  id                String    @id @default(cuid())
+  tenantId          String
+  workOrderId       String    @unique
+  /// Auto-generated per-tenant: PTW-2026-000001
+  permitNumber      String
+  status            PTWStatus @default(DRAFT)
+  title             String
+  description       String?
+  riskLevel         String    @default("MEDIUM")
+  hazards           String[]
+  precautions       String[]
+  requiredPPE       String[]
+  aiAssessment      Json?
+  siteId            String?
+  submittedAt       DateTime?
+  submittedById     String?
+  approvedAt        DateTime?
+  approvedById      String?
+  approverSignature String?
+  activatedAt       DateTime?
+  activatedById     String?
+  closedAt          DateTime?
+  closedById        String?
+  expiresAt         DateTime?
+  createdById       String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  Site              Site?     @relation(fields: [siteId], references: [id])
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  workOrder         WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId])
+  @@index([tenantId, workOrderId])
+}
+
+model ContractorToken {
+  id              String    @id
+  tenantId        String
+  tokenHash       String    @unique
+  contractorName  String
+  contractorEmail String?
+  workOrderIds    String[]
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdById     String
+  createdAt       DateTime  @default(now())
+  Tenant          Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([expiresAt])
+  @@index([tenantId])
+  @@index([tokenHash])
+}
+
+model Site {
+  id           String         @id
+  tenantId     String
+  name         String
+  code         String
+  address      String?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  Asset        Asset[]
+  PermitToWork PermitToWork[]
+  Tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  UserSite     UserSite[]
+  WorkOrder    WorkOrder[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model UserSite {
+  userId     String
+  siteId     String
+  assignedAt DateTime @default(now())
+  Site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, siteId])
+  @@index([siteId])
+}
 
 enum Plan {
   STARTER
@@ -69,523 +623,43 @@ enum TriggerType {
   CONDITION
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Multi-tenancy
-// ══════════════════════════════════════════════════════════════════════════════
-
-model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  plan      Plan     @default(STARTER)
-  isActive  Boolean  @default(true)
-  /// Tenant-level config: logo, timezone, currency, SLA rules, etc.
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users       User[]
-  assets      Asset[]
-  workOrders  WorkOrder[]
-  pmSchedules PMSchedule[]
-  locations   Location[]
-  categories  AssetCategory[]
-  parts       Part[]
-  auditLogs   AuditLog[]
-  attachments Attachment[]
-  invitations      Invitation[]
-  webhookEndpoints WebhookEndpoint[]
-  integrations     Integration[]
+enum PTWStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  ACTIVE
+  CLOSED
+  REJECTED
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Identity & Access
-// ══════════════════════════════════════════════════════════════════════════════
-
-model User {
-  id           String    @id @default(cuid())
-  tenantId     String
-  email        String
-  name         String
-  passwordHash String
-  role         Role      @default(VIEWER)
-  isActive     Boolean   @default(true)
-  avatarUrl    String?
-  phone        String?
-  jobTitle     String?
-  /// Technician skill tags used for PM schedule assignment matching
-  skills       String[]
-  lastLoginAt  DateTime?
-  deletedAt    DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  tenant          Tenant       @relation(fields: [tenantId], references: [id])
-  refreshTokens   RefreshToken[]
-  laborEntries    LaborEntry[]
-  comments        Comment[]
-  attachments     Attachment[]
-  auditLogs       AuditLog[]
-  sentInvitations Invitation[] @relation("InvitationSender")
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-  @@index([tenantId, role])
-  @@index([tenantId, isActive])
+enum ReportType {
+  PM_COMPLIANCE
+  DOWNTIME
+  WORK_ORDER_SUMMARY
+  CORRECTIVE_ACTIONS
+  PTW_SUMMARY
 }
 
-/// Stores hashed refresh tokens — never stores plaintext tokens
-model RefreshToken {
-  id        String    @id @default(cuid())
-  userId    String
-  /// SHA-256 hash of the actual token value
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Asset Management
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// Physical or virtual location in the facility hierarchy (up to 5 levels deep)
-model Location {
-  id        String   @id @default(cuid())
-  tenantId  String
-  code      String
-  name      String
-  parentId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant   Tenant     @relation(fields: [tenantId], references: [id])
-  parent   Location?  @relation("LocationHierarchy", fields: [parentId], references: [id])
-  children Location[] @relation("LocationHierarchy")
-  assets   Asset[]
-
-  @@unique([tenantId, code])
-  @@index([tenantId])
-  @@index([parentId])
-}
-
-model AssetCategory {
-  id        String   @id @default(cuid())
-  tenantId  String
-  code      String
-  name      String
-  createdAt DateTime @default(now())
-
-  tenant Tenant  @relation(fields: [tenantId], references: [id])
-  assets Asset[]
-
-  @@unique([tenantId, code])
-  @@index([tenantId])
-}
-
-model Asset {
-  id             String      @id @default(cuid())
-  tenantId       String
-  assetNumber    String
-  name           String
-  description    String?
-  categoryId     String
-  /// Self-reference for hierarchy: Plant > Building > System > Equipment > Component
-  parentId       String?
-  locationId     String?
-  criticality    Criticality @default(C)
-  status         AssetStatus @default(OPERATIONAL)
-  manufacturer   String?
-  model          String?
-  serialNumber   String?
-  installDate    DateTime?
-  warrantyExpiry DateTime?
-  purchaseCost   Decimal?    @db.Decimal(14, 2)
-  /// Unique QR code identifier — printed on physical asset tags
-  qrCode         String?     @unique
-  /// Extensible per-category metadata (custom fields)
-  customFields   Json        @default("{}")
-  deletedAt      DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  category    AssetCategory @relation(fields: [categoryId], references: [id])
-  location    Location?     @relation(fields: [locationId], references: [id])
-  parent      Asset?        @relation("AssetHierarchy", fields: [parentId], references: [id])
-  children    Asset[]       @relation("AssetHierarchy")
-  workOrders  WorkOrder[]
-  pmSchedules PMSchedule[]
-  attachments Attachment[]
-
-  @@unique([tenantId, assetNumber])
-  @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([tenantId, criticality])
-  @@index([parentId])
-  @@index([locationId])
-  @@index([categoryId])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Work Order Management
-// ══════════════════════════════════════════════════════════════════════════════
-
-model WorkOrder {
-  id             String    @id @default(cuid())
-  tenantId       String
-  /// Auto-generated per-tenant: WO-2024-000001 (handled in application layer)
-  woNumber       String
-  title          String
-  description    String?
-  type           WOType    @default(CORRECTIVE)
-  priority       Priority  @default(MEDIUM)
-  status         WOStatus  @default(DRAFT)
-  assetId        String
-  /// Sub-work-order support: parent WO cannot complete until all children complete
-  parentId       String?
-  /// Denormalized array of assigned User IDs — GIN index required for ANY() queries
-  /// See: infrastructure/db/migrations/add_work_order_assignees_gin_index.sql
-  assigneeIds    String[]
-  dueDate        DateTime?
-  slaDeadline    DateTime?
-  startedAt      DateTime?
-  completedAt    DateTime?
-  failureCodeId  String?
-  resolution     String?
-  /// Denormalized totals updated when labor entries / part usages change
-  totalLaborCost Decimal?  @db.Decimal(12, 2)
-  totalPartsCost Decimal?  @db.Decimal(12, 2)
-  createdById    String
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  tenant       Tenant       @relation(fields: [tenantId], references: [id])
-  asset        Asset        @relation(fields: [assetId], references: [id])
-  parent       WorkOrder?   @relation("WorkOrderHierarchy", fields: [parentId], references: [id])
-  children     WorkOrder[]  @relation("WorkOrderHierarchy")
-  failureCode  FailureCode? @relation(fields: [failureCodeId], references: [id])
-  laborEntries LaborEntry[]
-  partUsages   PartUsage[]
-  attachments  Attachment[]
-  comments     Comment[]
-
-  @@unique([tenantId, woNumber])
-  @@index([tenantId, status])
-  @@index([tenantId, assetId])
-  @@index([tenantId, priority, status])
-  @@index([tenantId, createdAt])
-  @@index([tenantId, dueDate])
-  @@index([parentId])
-  @@index([createdById])
-  @@index([failureCodeId])
-}
-
-model LaborEntry {
-  id           String   @id @default(cuid())
-  workOrderId  String
-  technicianId String
-  date         DateTime @db.Date
-  hours        Decimal  @db.Decimal(5, 2)
-  ratePerHour  Decimal  @db.Decimal(10, 2)
-  /// Denormalized: hours × ratePerHour — avoids recalculation on every read
-  totalCost    Decimal  @db.Decimal(12, 2)
-  description  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  technician User      @relation(fields: [technicianId], references: [id])
-
-  @@index([workOrderId])
-  @@index([technicianId])
-  @@index([date])
-}
-
-model Comment {
-  id          String   @id @default(cuid())
-  workOrderId String
-  authorId    String
-  body        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id])
-
-  @@index([workOrderId])
-  @@index([authorId])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Inventory
-// ══════════════════════════════════════════════════════════════════════════════
-
-model Part {
-  id            String    @id @default(cuid())
+/// Generated ISO-style maintenance reports — persisted record + MinIO PDF.
+model Report {
+  id            String     @id @default(cuid())
   tenantId      String
-  partNumber    String
-  name          String
-  description   String?
-  /// Current on-hand quantity
-  quantity      Int       @default(0)
-  /// Quantity reserved for open work orders — quantity - reservedQty = available
-  reservedQty   Int       @default(0)
-  minimumStock  Int       @default(0)
-  unitCost      Decimal   @db.Decimal(10, 2)
-  storeLocation String?
-  customFields  Json      @default("{}")
-  deletedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  reportType    ReportType
+  /// Auto-generated per-tenant: MH-RPT-{TYPE}-2026-000001
+  docNumber     String
+  periodFrom    DateTime
+  periodTo      DateTime
+  siteId        String?
+  /// Snapshot of computed metrics/tables used to render the PDF
+  data          Json       @default("{}")
+  /// MinIO object key — reports/{tenantId}/{docNumber}.pdf
+  pdfKey        String
+  generatedById String
+  createdAt     DateTime   @default(now())
 
-  tenant Tenant      @relation(fields: [tenantId], references: [id])
-  usages PartUsage[]
+  tenant      Tenant @relation(fields: [tenantId], references: [id])
+  generatedBy User   @relation(fields: [generatedById], references: [id])
 
-  @@unique([tenantId, partNumber])
-  @@index([tenantId])
-  @@index([tenantId, quantity])
-}
-
-model PartUsage {
-  id          String   @id @default(cuid())
-  workOrderId String
-  partId      String
-  quantity    Int
-  /// Cost snapshot at time of use — insulated from future price changes
-  unitCost    Decimal  @db.Decimal(10, 2)
-  totalCost   Decimal  @db.Decimal(12, 2)
-  usedAt      DateTime @default(now())
-  createdAt   DateTime @default(now())
-
-  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  part      Part      @relation(fields: [partId], references: [id])
-
-  @@index([workOrderId])
-  @@index([partId])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: File Storage
-// ══════════════════════════════════════════════════════════════════════════════
-
-model Attachment {
-  id           String   @id @default(cuid())
-  tenantId     String
-  workOrderId  String?
-  assetId      String?
-  uploadedById String
-  fileName     String
-  /// File size in bytes — enforced ≤ 20 MB at API layer
-  fileSize     Int
-  mimeType     String
-  /// MinIO object key — combine with MINIO_ENDPOINT to build presigned URL
-  storageKey   String   @unique
-  /// MinIO key for auto-generated thumbnail (images only)
-  thumbnailKey String?
-  createdAt    DateTime @default(now())
-
-  tenant     Tenant     @relation(fields: [tenantId], references: [id])
-  workOrder  WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  asset      Asset?     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  uploadedBy User       @relation(fields: [uploadedById], references: [id])
-
-  @@index([tenantId])
-  @@index([workOrderId])
-  @@index([assetId])
-  @@index([uploadedById])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Preventive Maintenance
-// ══════════════════════════════════════════════════════════════════════════════
-
-model PMSchedule {
-  id             String      @id @default(cuid())
-  tenantId       String
-  assetId        String
-  title          String
-  description    String?
-  triggerType    TriggerType
-  /// CALENDAR: { frequency, dayOfMonth?, dayOfWeek?, advanceNoticeDays }
-  calendarRule   Json?
-  /// METER: { meterField, interval, tolerance, currentReading }
-  meterRule      Json?
-  /// CONDITION: { sensorId, metric, operator, threshold, durationMinutes, cooldownMinutes }
-  conditionRule  Json?
-  /// Array of Task objects — validated as TaskSchema[] in application layer
-  taskList       Json        @default("[]")
-  estimatedHours Decimal?    @db.Decimal(6, 2)
-  requiredSkills String[]
-  isActive       Boolean     @default(true)
-  lastTriggered  DateTime?
-  nextDue        DateTime?
-  createdById    String
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  asset  Asset  @relation(fields: [assetId], references: [id])
-
-  @@index([tenantId])
-  @@index([tenantId, isActive, nextDue])
-  @@index([assetId])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Failure Analysis (ISO 14224)
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// Global (cross-tenant) ISO 14224 failure taxonomy
-model FailureCode {
-  id       String  @id @default(cuid())
-  /// e.g. MECH-001
-  code     String  @unique
-  name     String
-  /// ISO 14224 category: Mechanical | Electrical | Instrumentation | …
-  category String
-  system   String?
-  /// Failure mode description for technician reference
-  notes    String?
-
-  workOrders WorkOrder[]
-
-  @@index([category])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Integrations & Webhooks
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// A tenant-owned HTTPS endpoint that receives signed domain-event payloads.
-model WebhookEndpoint {
-  id              String    @id @default(cuid())
-  tenantId        String
-  url             String
-  /// HMAC-SHA256 key stored in plaintext (encrypt at rest via KMS in prod).
-  secret          String
-  /// Serialised WebhookEventType[]; stored as String[] for portability.
-  events          String[]
-  isActive        Boolean   @default(false)
-  failureCount    Int       @default(0)
-  lastDeliveredAt DateTime?
-  createdById     String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  tenant    Tenant            @relation(fields: [tenantId], references: [id])
-  deliveries WebhookDelivery[]
-
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-}
-
-/// A single HTTP delivery attempt for a domain event notification.
-model WebhookDelivery {
-  id                String    @id @default(cuid())
-  webhookEndpointId String
-  /// WebhookEventType discriminant stored as string.
-  event             String
-  payload           Json
-  /// PENDING | DELIVERED | FAILED
-  status            String    @default("PENDING")
-  attemptCount      Int       @default(0)
-  lastAttemptAt     DateTime?
-  responseCode      Int?
-  responseBody      String?
-  nextRetryAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  endpoint WebhookEndpoint @relation(fields: [webhookEndpointId], references: [id])
-
-  @@index([status, nextRetryAt])
-  @@index([webhookEndpointId])
-}
-
-/// External system connection (Zapier, Slack, Azure AD, etc.).
-model Integration {
-  id          String    @id @default(cuid())
-  tenantId    String
-  /// Provider discriminant: zapier | make | slack | google_workspace | azure_ad
-  provider    String
-  /// Encrypted configuration blob (AEAD encryption by the infrastructure layer).
-  config      Json      @default("{}")
-  isActive    Boolean   @default(false)
-  lastSyncAt  DateTime?
-  createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@unique([tenantId, provider])
-  @@index([tenantId])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: Audit & Compliance
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// Immutable audit trail — application layer must never allow UPDATE or DELETE
-model AuditLog {
-  id         String   @id @default(cuid())
-  tenantId   String
-  /// Null for system-generated events (scheduled jobs, automated triggers)
-  userId     String?
-  /// Screaming snake_case action codes: CREATE_WORK_ORDER, UPDATE_WO_STATUS, …
-  action     String
-  entityType String
-  entityId   String
-  /// Full snapshot of the entity before the mutation
-  before     Json?
-  /// Full snapshot of the entity after the mutation
-  after      Json?
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  user   User?  @relation(fields: [userId], references: [id])
-
-  @@index([tenantId, entityType, entityId])
-  @@index([tenantId, createdAt])
-  @@index([tenantId, userId])
-  @@index([tenantId, action])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// BOUNDED CONTEXT: User Invitations
-// ══════════════════════════════════════════════════════════════════════════════
-
-/// Tracks each invitation email sent to an external address.
-/// tokenHash = SHA-256(jwt) for revocation without keeping the plaintext token.
-/// acceptedAt is null while pending; set when the invitee creates their account.
-/// Re-inviting the same email revokes any existing pending invitations first.
-model Invitation {
-  id          String    @id @default(cuid())
-  tenantId    String
-  email       String
-  role        Role      @default(TECHNICIAN)
-  /// SHA-256 hash of the signed JWT — stored so we can revoke without keeping
-  /// the plaintext token in the database
-  tokenHash   String    @unique
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  invitedById String
-  createdAt   DateTime  @default(now())
-
-  tenant    Tenant @relation(fields: [tenantId], references: [id])
-  invitedBy User   @relation("InvitationSender", fields: [invitedById], references: [id])
-
-  @@index([tenantId, email])
-  @@index([tokenHash])
-  @@index([tenantId, acceptedAt])
-  @@index([expiresAt])
+  @@unique([tenantId, docNumber])
+  @@index([tenantId, reportType, createdAt])
 }

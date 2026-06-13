@@ -1,8 +1,10 @@
 /**
  * Analytics routes for work-order dashboards and calendar views.
  *
- * GET /metrics  — aggregated KPIs (Redis-cached 5 min, ADMIN/MANAGER only)
- * GET /calendar — WOs + PM due dates grouped by calendar day (all roles)
+ * GET /metrics             — aggregated KPIs (Redis-cached 5 min, ADMIN/MANAGER only)
+ * GET /metrics/reliability — per-asset MTBF/MTTR/availability (Redis-cached 5 min, ADMIN/MANAGER only)
+ * GET /metrics/costs       — cost mix + monthly cost by failure category (Redis-cached 5 min, ADMIN/MANAGER only)
+ * GET /calendar            — WOs + PM due dates grouped by calendar day (all roles)
  *
  * ## Metrics response
  *   byStatus            — count per WOStatus
@@ -27,6 +29,8 @@ import { requirePermission } from '../../../middleware/require-permission.js'
 import {
   GetWorkOrderMetricsHandler,
   GetWorkOrderCalendarHandler,
+  GetAssetReliabilityHandler,
+  GetCostBreakdownHandler,
 } from '../../../application/work-orders/queries/index.js'
 import type { QueryContext } from '../../../application/work-orders/queries/index.js'
 import { errorBody } from './route-helpers.js'
@@ -42,6 +46,11 @@ const metricsQuerySchema = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   groupBy: z.enum(['day', 'week', 'month']).default('day'),
+})
+
+const rangeQuerySchema = z.object({
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
 })
 
 const calendarQuerySchema = z.object({
@@ -92,7 +101,9 @@ async function fetchTrend(
   dateTo: Date,
   groupBy: 'day' | 'week' | 'month',
 ): Promise<TrendRow[]> {
-  const trunc = Prisma.raw(groupBy)
+  // DATE_TRUNC takes the unit as a string literal — the value is constrained
+  // to 'day' | 'week' | 'month' by Zod, so quoting it here is injection-safe.
+  const trunc = Prisma.raw(`'${groupBy}'`)
   const rows = await prisma.$queryRaw<
     Array<{
       period: Date
@@ -101,14 +112,14 @@ async function fetchTrend(
     }>
   >`
     SELECT
-      DATE_TRUNC(${trunc}, created_at) AS period,
+      DATE_TRUNC(${trunc}, "createdAt") AS period,
       status,
-      COUNT(*)::INTEGER                AS count
-    FROM work_orders
-    WHERE tenant_id = ${tenantId}
-      AND deleted_at IS NULL
-      AND created_at >= ${dateFrom}
-      AND created_at <= ${dateTo}
+      COUNT(*)::INTEGER                 AS count
+    FROM "WorkOrder"
+    WHERE "tenantId" = ${tenantId}
+      AND "deletedAt" IS NULL
+      AND "createdAt" >= ${dateFrom}
+      AND "createdAt" <= ${dateTo}
     GROUP BY period, status
     ORDER BY period ASC
   `
@@ -213,7 +224,8 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
         totalCost += labor + parts
 
         if (r.completedAt) {
-          totalHours += (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000
+          // Clamp to 0 — dirty data can have completedAt before createdAt
+          totalHours += Math.max(0, (r.completedAt.getTime() - r.createdAt.getTime()) / 3_600_000)
           completedWithDate += 1
         }
       }
@@ -247,6 +259,133 @@ const analyticsRoutes: FastifyPluginAsync = async (fastify) => {
         totalCost: Math.round(totalCost * 100) / 100,
         trend,
       }
+
+      await metricsSet(request.server.redis, cacheKey, result)
+      return reply.send(result)
+    },
+  )
+
+  // ── GET /metrics/reliability ───────────────────────────────────────────────
+  fastify.get(
+    '/metrics/reliability',
+    {
+      schema: {
+        description:
+          'Per-asset MTBF / MTTR / availability with monthly series and WO volume by type. ' +
+          'Cached in Redis for 5 minutes.',
+        tags: ['work-orders', 'analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            dateFrom: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Range start (ISO 8601). Default: 12 months before dateTo.',
+            },
+            dateTo: { type: 'string', format: 'date-time', description: 'Range end (ISO 8601)' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              from: { type: 'string' },
+              to: { type: 'string' },
+              assets: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              mtbfSeries: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              mttrSeries: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              volumeByType: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+            },
+          },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+        },
+      } as OASSchema,
+      preHandler: requirePermission('audit-log', 'read'),
+    },
+    async (request, reply) => {
+      const q = rangeQuerySchema.parse(request.query)
+      const to = q.dateTo ? new Date(q.dateTo) : new Date()
+      const from = q.dateFrom
+        ? new Date(q.dateFrom)
+        : new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - 11, 1))
+
+      const cacheKey = metricsCacheKey(
+        request.user.tid,
+        `reliability:${from.toISOString()}:${to.toISOString()}`,
+      )
+      const cached = await metricsGet(request.server.redis, cacheKey)
+      if (cached !== null) return reply.send(cached)
+
+      const handler = new GetAssetReliabilityHandler(request.db)
+      const result = await handler.handle({ from, to }, buildQryCtx(request))
+
+      await metricsSet(request.server.redis, cacheKey, result)
+      return reply.send(result)
+    },
+  )
+
+  // ── GET /metrics/costs ─────────────────────────────────────────────────────
+  fastify.get(
+    '/metrics/costs',
+    {
+      schema: {
+        description:
+          'Maintenance cost breakdown: labor/parts/contractor mix and monthly cost by ' +
+          'ISO 14224 failure category. Cached in Redis for 5 minutes.',
+        tags: ['work-orders', 'analytics'],
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            dateFrom: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Range start (ISO 8601). Default: 12 months before dateTo.',
+            },
+            dateTo: { type: 'string', format: 'date-time', description: 'Range end (ISO 8601)' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              from: { type: 'string' },
+              to: { type: 'string' },
+              costMix: { type: 'object', additionalProperties: true },
+              monthlyByCategory: {
+                type: 'array',
+                items: { type: 'object', additionalProperties: true },
+              },
+              totalCost: { type: 'number' },
+            },
+          },
+          401: { description: 'Unauthorised', ...errorBody },
+          403: { description: 'Forbidden', ...errorBody },
+        },
+      } as OASSchema,
+      preHandler: requirePermission('audit-log', 'read'),
+    },
+    async (request, reply) => {
+      const q = rangeQuerySchema.parse(request.query)
+      const to = q.dateTo ? new Date(q.dateTo) : new Date()
+      const from = q.dateFrom
+        ? new Date(q.dateFrom)
+        : new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - 11, 1))
+
+      const cacheKey = metricsCacheKey(
+        request.user.tid,
+        `costs:${from.toISOString()}:${to.toISOString()}`,
+      )
+      const cached = await metricsGet(request.server.redis, cacheKey)
+      if (cached !== null) return reply.send(cached)
+
+      const handler = new GetCostBreakdownHandler(request.db)
+      const result = await handler.handle({ from, to }, buildQryCtx(request))
 
       await metricsSet(request.server.redis, cacheKey, result)
       return reply.send(result)

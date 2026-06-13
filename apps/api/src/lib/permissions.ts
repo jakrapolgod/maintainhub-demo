@@ -182,6 +182,7 @@ const PERMISSIONS: PermissionMatrix = {
 
   report: {
     read: row({ ADMIN: 'allow', MANAGER: 'allow', TECHNICIAN: 'allow', VIEWER: 'allow' }),
+    create: row({ ADMIN: 'allow', MANAGER: 'allow' }),
   },
 
   // ── Audit Log ────────────────────────────────────────────────────────────
