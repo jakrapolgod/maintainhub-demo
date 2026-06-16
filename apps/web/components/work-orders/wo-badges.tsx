@@ -14,12 +14,12 @@ const STATUS_CONFIG: Record<
     variant: 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'info' | 'destructive'
   }
 > = {
-  DRAFT: { label: 'Draft', variant: 'secondary' },
-  OPEN: { label: 'Open', variant: 'info' },
-  IN_PROGRESS: { label: 'In Progress', variant: 'warning' },
-  ON_HOLD: { label: 'On Hold', variant: 'outline' },
-  COMPLETED: { label: 'Completed', variant: 'success' },
-  CANCELLED: { label: 'Cancelled', variant: 'destructive' },
+  DRAFT: { label: 'ร่าง', variant: 'secondary' },
+  OPEN: { label: 'เปิด', variant: 'info' },
+  IN_PROGRESS: { label: 'กำลังดำเนินการ', variant: 'warning' },
+  ON_HOLD: { label: 'ระงับชั่วคราว', variant: 'outline' },
+  COMPLETED: { label: 'เสร็จสิ้น', variant: 'success' },
+  CANCELLED: { label: 'ยกเลิก', variant: 'destructive' },
 }
 
 export function StatusBadge({ status }: { status: WOStatus }) {
@@ -40,10 +40,10 @@ const PRIORITY_CONFIG: Record<
     dot: string
   }
 > = {
-  CRITICAL: { label: 'Critical', variant: 'destructive', dot: 'bg-red-500' },
-  HIGH: { label: 'High', variant: 'warning', dot: 'bg-orange-500' },
-  MEDIUM: { label: 'Medium', variant: 'info', dot: 'bg-blue-500' },
-  LOW: { label: 'Low', variant: 'secondary', dot: 'bg-gray-400' },
+  CRITICAL: { label: 'วิกฤต', variant: 'destructive', dot: 'bg-red-500' },
+  HIGH: { label: 'สูง', variant: 'warning', dot: 'bg-orange-500' },
+  MEDIUM: { label: 'ปานกลาง', variant: 'info', dot: 'bg-blue-500' },
+  LOW: { label: 'ต่ำ', variant: 'secondary', dot: 'bg-gray-400' },
 }
 
 export function PriorityBadge({ priority }: { priority: WOPriority }) {
@@ -63,10 +63,10 @@ export function PriorityBadge({ priority }: { priority: WOPriority }) {
 // ── WO type label ─────────────────────────────────────────────────────────────
 
 const TYPE_LABELS: Record<string, string> = {
-  CORRECTIVE: 'Corrective',
-  PREVENTIVE: 'Preventive',
-  INSPECTION: 'Inspection',
-  EMERGENCY: 'Emergency',
+  CORRECTIVE: 'งานแก้ไข',
+  PREVENTIVE: 'งานป้องกัน',
+  INSPECTION: 'งานตรวจสอบ',
+  EMERGENCY: 'งานฉุกเฉิน',
 }
 
 export function TypeLabel({ type }: { type: string }) {

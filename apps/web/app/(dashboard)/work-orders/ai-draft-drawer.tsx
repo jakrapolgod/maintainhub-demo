@@ -41,7 +41,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
     {
       role: 'assistant',
       content:
-        "Describe the maintenance issue and I'll create a work order for you. Include the asset name, symptoms, and urgency.",
+        'อธิบายปัญหาการซ่อมบำรุง แล้วฉันจะสร้างใบสั่งงานให้คุณ รวมถึงชื่อสินทรัพย์ อาการผิดปกติ และความเร่งด่วน',
     },
   ])
   const [draft, setDraft] = useState<WorkOrderDraft | null>(null)
@@ -60,7 +60,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
     setMessages([
       {
         role: 'assistant',
-        content: "Describe the maintenance issue and I'll create a work order for you.",
+        content: 'อธิบายปัญหาการซ่อมบำรุง แล้วฉันจะสร้างใบสั่งงานให้คุณ',
       },
     ])
   }
@@ -80,7 +80,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
             ...prev,
             {
               role: 'assistant',
-              content: `I've created a draft work order. Review it below and confirm, edit, or discard.`,
+              content: `สร้างร่างใบสั่งงานแล้ว ตรวจสอบด้านล่างและยืนยัน แก้ไข หรือยกเลิก`,
             },
           ])
         },
@@ -89,7 +89,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
             ...prev,
             {
               role: 'assistant',
-              content: `Sorry, I couldn't generate a draft: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              content: `ขออภัย ไม่สามารถสร้างร่างได้: ${err instanceof Error ? err.message : 'เกิดข้อผิดพลาด'}`,
             },
           ])
         },
@@ -109,7 +109,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
       },
       {
         onSuccess: (result) => {
-          toast.success(`Work order ${result.woNumber} created!`)
+          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว!`)
           onClose()
           router.push(`/work-orders/${result.id}`)
         },
@@ -147,12 +147,12 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">AI Work Order Assistant</h2>
+            <h2 className="font-semibold text-sm">ผู้ช่วย AI สร้างใบสั่งงาน</h2>
           </div>
           <div className="flex items-center gap-2">
             {(messages.length > 1 || draft) && (
               <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs h-7">
-                New chat
+                เริ่มใหม่
               </Button>
             )}
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
@@ -204,7 +204,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Draft Work Order
+                    ร่างใบสั่งงาน
                   </span>
                   <PriorityBadge priority={draft.priority as WOPriority} />
                 </div>
@@ -229,11 +229,11 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
                     ) : (
                       <CheckCircle className="h-3.5 w-3.5" />
                     )}
-                    Confirm
+                    ยืนยัน
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleEdit} className="gap-1.5">
                     <Pencil className="h-3.5 w-3.5" />
-                    Edit
+                    แก้ไข
                   </Button>
                   <Button
                     size="sm"
@@ -247,7 +247,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
 
                 {!draft.assetId && (
                   <p className="text-xs text-amber-600">
-                    Asset ID missing — please edit the form to select an asset before confirming.
+                    ยังไม่เลือกสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อนยืนยัน
                   </p>
                 )}
               </CardContent>
@@ -261,7 +261,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
         <div className="border-t px-4 py-3">
           <div className="flex gap-2">
             <Input
-              placeholder="Describe the maintenance issue…"
+              placeholder="อธิบายปัญหาการซ่อมบำรุง…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -286,7 +286,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
             </Button>
           </div>
           <p className="mt-1.5 text-[11px] text-muted-foreground text-center">
-            Powered by Claude · Results are suggestions — always review before saving
+            ขับเคลื่อนโดย Claude · ผลลัพธ์เป็นข้อเสนอแนะ — กรุณาตรวจสอบก่อนบันทึก
           </p>
         </div>
       </aside>

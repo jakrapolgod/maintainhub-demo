@@ -16,6 +16,7 @@ import { useState, useCallback, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, isAfter } from 'date-fns'
+import { formatThaiDate, formatThaiDateShort } from '@/lib/formatThaiDate'
 import {
   Plus,
   LayoutList,
@@ -73,6 +74,22 @@ const ALL_STATUSES: WOStatus[] = [
 ]
 const KANBAN_STATUSES: WOStatus[] = ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED']
 
+const STATUS_LABELS: Record<WOStatus, string> = {
+  DRAFT: 'ร่าง',
+  OPEN: 'เปิด',
+  IN_PROGRESS: 'กำลังดำเนินการ',
+  ON_HOLD: 'ระงับชั่วคราว',
+  COMPLETED: 'เสร็จสิ้น',
+  CANCELLED: 'ยกเลิก',
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  CRITICAL: 'วิกฤต',
+  HIGH: 'สูง',
+  MEDIUM: 'ปานกลาง',
+  LOW: 'ต่ำ',
+}
+
 type View = 'table' | 'kanban' | 'calendar'
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -120,7 +137,7 @@ export function WorkOrderListClient() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search work orders…"
+              placeholder="ค้นหาใบสั่งงาน…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -141,7 +158,7 @@ export function WorkOrderListClient() {
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => setView(v)}
-                title={v.charAt(0).toUpperCase() + v.slice(1)}
+                title={v === 'table' ? 'ตาราง' : v === 'kanban' ? 'คัมบัง' : 'ปฏิทิน'}
               >
                 <Icon className="h-4 w-4" />
               </Button>
@@ -150,7 +167,7 @@ export function WorkOrderListClient() {
 
           <Button onClick={() => setAiDrawerOpen(true)} className="gap-2">
             <Sparkles className="h-4 w-4" />
-            New Work Order
+            ใบสั่งงานใหม่
           </Button>
         </div>
 
@@ -167,7 +184,7 @@ export function WorkOrderListClient() {
                   : 'border-border hover:bg-accent'
               }`}
             >
-              {s.replace('_', ' ')}
+              {STATUS_LABELS[s] ?? s}
             </button>
           ))}
 
@@ -179,13 +196,13 @@ export function WorkOrderListClient() {
               onValueChange={(v) => setPriorityFilter(v as WOPriority | 'all')}
             >
               <SelectTrigger className="h-8 w-32 text-xs">
-                <SelectValue placeholder="Priority" />
+                <SelectValue placeholder="ความเร่งด่วน" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All priorities</SelectItem>
+                <SelectItem value="all">ทุกระดับ</SelectItem>
                 {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as WOPriority[]).map((p) => (
                   <SelectItem key={p} value={p}>
-                    {p}
+                    {PRIORITY_LABELS[p] ?? p}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -196,7 +213,7 @@ export function WorkOrderListClient() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="h-8 w-36 text-xs"
-              title="From date"
+              title="วันเริ่มต้น"
             />
             <span className="text-muted-foreground text-xs">–</span>
             <Input
@@ -204,7 +221,7 @@ export function WorkOrderListClient() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="h-8 w-36 text-xs"
-              title="To date"
+              title="วันสิ้นสุด"
             />
 
             {(statusFilter.length > 0 || priorityFilter !== 'all' || dateFrom || dateTo) && (
@@ -219,7 +236,7 @@ export function WorkOrderListClient() {
                   setDateTo('')
                 }}
               >
-                Clear
+                ล้างตัวกรอง
               </Button>
             )}
           </div>
@@ -279,22 +296,29 @@ function TableView({
 
   return (
     <div className="p-6">
-      <p className="mb-3 text-xs text-muted-foreground">{total} work orders</p>
+      <p className="mb-3 text-xs text-muted-foreground">ทั้งหมด {total} ใบสั่งงาน</p>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
-              {['WO #', 'Title', 'Asset', 'Priority', 'Status', 'Assignees', 'Due Date', ''].map(
-                (h) => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
+              {[
+                'เลขที่',
+                'ชื่องาน',
+                'สินทรัพย์',
+                'ความเร่งด่วน',
+                'สถานะ',
+                'ผู้รับผิดชอบ',
+                'วันกำหนดเสร็จ',
+                '',
+              ].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -304,7 +328,7 @@ function TableView({
             {items.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
-                  No work orders match your filters.
+                  ไม่พบใบสั่งงานที่ตรงกับตัวกรอง
                 </td>
               </tr>
             )}
@@ -349,9 +373,7 @@ function WorkOrderRow({ wo, onClick }: { wo: WorkOrderSummary; onClick: () => vo
       <td
         className={`px-4 py-3 text-xs whitespace-nowrap ${isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}`}
       >
-        {wo.dueDate
-          ? `${isOverdue ? '⚠ ' : ''}${format(new Date(wo.dueDate), 'MMM d, yyyy')}`
-          : '—'}
+        {wo.dueDate ? `${isOverdue ? '⚠ ' : ''}${formatThaiDate(wo.dueDate)}` : '—'}
       </td>
       <td className="px-4 py-3">
         <Link
@@ -359,7 +381,7 @@ function WorkOrderRow({ wo, onClick }: { wo: WorkOrderSummary; onClick: () => vo
           className="text-xs text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          View
+          ดู
         </Link>
       </td>
     </tr>
@@ -431,7 +453,7 @@ function KanbanView({
                 <KanbanCard key={wo.id} wo={wo} onClick={() => onOpen(wo.id)} />
               ))}
               {col.length === 0 && (
-                <div className="py-8 text-center text-xs text-muted-foreground">No items</div>
+                <div className="py-8 text-center text-xs text-muted-foreground">ยังไม่มีรายการ</div>
               )}
             </div>
           </div>
@@ -463,7 +485,7 @@ function KanbanCard({ wo, onClick }: { wo: WorkOrderSummary; onClick: () => void
           <AssigneeAvatars assignees={wo.assignees} max={2} size="sm" />
           {wo.dueDate && (
             <span className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {format(new Date(wo.dueDate), 'MMM d')}
+              {formatThaiDateShort(wo.dueDate)}
             </span>
           )}
         </div>
@@ -502,10 +524,10 @@ function CalendarView() {
   return (
     <div className="p-6">
       <h2 className="mb-4 text-lg font-semibold">
-        {format(new Date(year, month - 1), 'MMMM yyyy')}
+        {new Date(year, month - 1).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}
       </h2>
       <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-1">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+        {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((d) => (
           <div key={d} className="py-1">
             {d}
           </div>
@@ -540,7 +562,7 @@ function CalendarView() {
               ))}
               {(entry?.workOrders.length ?? 0) > 3 && (
                 <span className="text-[10px] text-muted-foreground">
-                  +{(entry?.workOrders.length ?? 0) - 3} more
+                  +{(entry?.workOrders.length ?? 0) - 3} เพิ่มเติม
                 </span>
               )}
               {(entry?.pmDue ?? []).slice(0, 2).map((pm) => (

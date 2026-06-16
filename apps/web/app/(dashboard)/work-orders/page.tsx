@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { WorkOrderListClient } from './work-order-list-client'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export const metadata: Metadata = { title: 'Work Orders' }
+export const metadata: Metadata = { title: 'ใบสั่งงาน' }
 
 // This is a Server Component — Next.js will render the shell on the server
 // and stream the client bundle for the interactive list below.
@@ -12,10 +12,8 @@ export default function WorkOrdersPage() {
     <div className="flex h-full flex-col">
       {/* Page header */}
       <div className="border-b bg-background px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Work Orders</h1>
-        <p className="text-sm text-muted-foreground">
-          Track and manage all maintenance tasks across your facility.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">ใบสั่งงาน</h1>
+        <p className="text-sm text-muted-foreground">ติดตามและจัดการงานซ่อมบำรุงทั้งหมดในโรงงาน</p>
       </div>
 
       {/* Interactive list (client boundary) */}

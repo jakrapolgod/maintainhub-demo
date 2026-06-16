@@ -47,11 +47,7 @@ import type { FailureCodeResult } from '@/lib/api/work-orders'
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  resolution: z
-    .string()
-    .trim()
-    .min(10, 'Describe the work done (at least 10 characters)')
-    .max(5_000),
+  resolution: z.string().trim().min(10, 'อธิบายงานที่ทำ (อย่างน้อย 10 ตัวอักษร)').max(5_000),
   failureCodeId: z.string().optional(),
 })
 
@@ -149,10 +145,10 @@ export function CompleteWorkOrderDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-emerald-600" />
-            Complete Work Order
+            ยืนยันการเสร็จสิ้นงาน
           </DialogTitle>
           <DialogDescription>
-            Provide a resolution summary. This creates a permanent record of what was done.
+            กรอกสรุปผลการดำเนินการ ข้อมูลนี้จะถูกบันทึกเป็นหลักฐานถาวร
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +157,7 @@ export function CompleteWorkOrderDialog({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="wo-resolution">
-                Resolution <span className="text-destructive">*</span>
+                ผลการดำเนินการ <span className="text-destructive">*</span>
               </Label>
               <span
                 className={`text-xs ${isResolutionOk ? 'text-muted-foreground' : 'text-amber-600'}`}
@@ -171,7 +167,7 @@ export function CompleteWorkOrderDialog({
             </div>
             <Textarea
               id="wo-resolution"
-              placeholder="Describe what was done, parts replaced, tests performed, and the outcome…"
+              placeholder="อธิบายงานที่ทำ อะไหล่ที่เปลี่ยน การทดสอบ และผลลัพธ์…"
               rows={5}
               {...form.register('resolution')}
               className={
@@ -188,7 +184,7 @@ export function CompleteWorkOrderDialog({
           {/* Failure code — two-level select */}
           <div className="space-y-2">
             <Label>
-              Failure Code <span className="text-xs text-muted-foreground">(optional)</span>
+              รหัสความเสียหาย <span className="text-xs text-muted-foreground">(ไม่บังคับ)</span>
             </Label>
 
             {fcPending ? (
@@ -205,10 +201,10 @@ export function CompleteWorkOrderDialog({
                   }}
                 >
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Category…" />
+                    <SelectValue placeholder="หมวดหมู่…" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                    <SelectItem value="__none__">ไม่ระบุ</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
@@ -229,7 +225,7 @@ export function CompleteWorkOrderDialog({
                       }
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Failure mode…" />
+                        <SelectValue placeholder="รูปแบบความเสียหาย…" />
                       </SelectTrigger>
                       <SelectContent>
                         {modesInCategory.map((fc) => (
@@ -253,7 +249,7 @@ export function CompleteWorkOrderDialog({
             <div className="px-4 py-2 flex items-center justify-between">
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                Labor
+                แรงงาน
               </span>
               {laborPending ? (
                 <Skeleton className="h-4 w-24" />
@@ -266,7 +262,7 @@ export function CompleteWorkOrderDialog({
             <div className="px-4 py-2 flex items-center justify-between">
               <span className="flex items-center gap-2 text-muted-foreground">
                 <Package className="h-3.5 w-3.5" />
-                Parts
+                อะไหล่
               </span>
               {partsPending ? (
                 <Skeleton className="h-4 w-24" />
@@ -275,7 +271,7 @@ export function CompleteWorkOrderDialog({
               )}
             </div>
             <div className="px-4 py-2 flex items-center justify-between font-semibold">
-              <span>Total</span>
+              <span>รวม</span>
               {laborPending || partsPending ? (
                 <Skeleton className="h-4 w-28" />
               ) : (
@@ -286,7 +282,7 @@ export function CompleteWorkOrderDialog({
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button
               type="submit"
@@ -298,7 +294,7 @@ export function CompleteWorkOrderDialog({
               ) : (
                 <CheckCircle className="h-4 w-4" />
               )}
-              Mark Complete
+              ยืนยันเสร็จสิ้น
             </Button>
           </DialogFooter>
         </form>

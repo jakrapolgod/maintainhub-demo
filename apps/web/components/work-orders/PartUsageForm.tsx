@@ -50,14 +50,14 @@ function useDebounceSimple<T>(value: T, delay: number): T {
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  partId: z.string().min(1, 'Select a part'),
+  partId: z.string().min(1, 'กรุณาเลือกอะไหล่'),
   quantity: z
-    .number({ invalid_type_error: 'Enter a whole number' })
-    .int('Must be a whole number')
-    .min(1, 'Minimum 1')
-    .max(10_000, 'Quantity too high'),
+    .number({ invalid_type_error: 'กรุณาระบุจำนวนเต็ม' })
+    .int('ต้องเป็นจำนวนเต็ม')
+    .min(1, 'ขั้นต่ำ 1')
+    .max(10_000, 'จำนวนมากเกินไป'),
   unitCost: z
-    .number({ invalid_type_error: 'Enter a number' })
+    .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
     .nonnegative()
     .max(9_999_999)
     .optional(),
@@ -132,21 +132,21 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record Part Usage</DialogTitle>
-          <DialogDescription>Search for a part and enter the quantity consumed.</DialogDescription>
+          <DialogTitle>บันทึกการใช้อะไหล่</DialogTitle>
+          <DialogDescription>ค้นหาอะไหล่และระบุจำนวนที่ใช้</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
           {/* Part search */}
           <div className="space-y-1.5 relative">
             <Label htmlFor="part-search">
-              Part <span className="text-destructive">*</span>
+              อะไหล่ <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="part-search"
-                placeholder="Search by name or part number…"
+                placeholder="ค้นหาตามชื่อหรือรหัสอะไหล่…"
                 value={search}
                 autoComplete="off"
                 className="pl-9"
@@ -184,7 +184,7 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
                           <span
                             className={`text-xs font-medium ${avail <= 0 ? 'text-destructive' : avail <= 5 ? 'text-amber-600' : 'text-muted-foreground'}`}
                           >
-                            {avail} avail.
+                            {avail} คงเหลือ
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -216,9 +216,9 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
             >
               <Package className="h-3.5 w-3.5 shrink-0" />
               <span>
-                On hand: <strong>{selectedPart.quantity}</strong>
-                {selectedPart.reservedQty > 0 && ` (${selectedPart.reservedQty} reserved)`}
-                {' · '}Available: <strong>{available}</strong>
+                ในมือ: <strong>{selectedPart.quantity}</strong>
+                {selectedPart.reservedQty > 0 && ` (${selectedPart.reservedQty} จอง)`}
+                {' · '}พร้อมใช้: <strong>{available}</strong>
               </span>
             </div>
           )}
@@ -226,7 +226,7 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
           {/* Quantity */}
           <div className="space-y-1.5">
             <Label htmlFor="part-qty">
-              Quantity <span className="text-destructive">*</span>
+              จำนวน <span className="text-destructive">*</span>
             </Label>
             <Input
               id="part-qty"
@@ -244,10 +244,9 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
           {/* Unit cost override */}
           <div className="space-y-1.5">
             <Label htmlFor="part-cost">
-              Unit Cost Override (฿)
+              ราคาต่อหน่วย (฿) กำหนดเอง
               <span className="ml-1 text-xs text-muted-foreground">
-                — leave blank to use catalog price{' '}
-                {selectedPart ? `(฿${selectedPart.unitCost})` : ''}
+                — เว้นว่างเพื่อใช้ราคาในคลัง {selectedPart ? `(฿${selectedPart.unitCost})` : ''}
               </span>
             </Label>
             <Input
@@ -263,7 +262,7 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
           {/* Estimated cost */}
           {selectedPart && (
             <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
-              <span className="text-sm text-muted-foreground">Estimated cost:</span>
+              <span className="text-sm text-muted-foreground">ต้นทุนโดยประมาณ:</span>
               <span className="text-sm font-semibold">
                 ฿{estimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
               </span>
@@ -277,18 +276,17 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
               className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
             >
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              Requested quantity ({quantity}) exceeds available stock ({available}). The server will
-              reject this request.
+              จำนวนที่ขอ ({quantity}) เกินคงเหลือในคลัง ({available}) เซิร์ฟเวอร์จะปฏิเสธคำขอนี้
             </div>
           )}
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button type="submit" disabled={usePartMutation.isPending} className="gap-2">
               {usePartMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Record Usage
+              บันทึกการใช้
             </Button>
           </DialogFooter>
         </form>

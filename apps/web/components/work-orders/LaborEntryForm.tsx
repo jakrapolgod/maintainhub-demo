@@ -38,19 +38,19 @@ import { useAddLabor } from '@/hooks/useWorkOrders'
 const schema = z.object({
   date: z
     .string()
-    .min(1, 'Date is required')
+    .min(1, 'กรุณาระบุวันที่')
     .refine((d) => d <= format(new Date(), 'yyyy-MM-dd'), {
-      message: 'Date cannot be in the future',
+      message: 'วันที่ไม่สามารถเป็นอนาคตได้',
     }),
   hours: z
-    .number({ invalid_type_error: 'Enter a number' })
-    .min(0.5, 'Minimum 0.5 hours')
-    .max(24, 'Maximum 24 hours per entry')
-    .multipleOf(0.5, 'Must be in 30-minute increments (0.5, 1.0, 1.5, …)'),
+    .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
+    .min(0.5, 'ขั้นต่ำ 0.5 ชั่วโมง')
+    .max(24, 'สูงสุด 24 ชั่วโมงต่อรายการ')
+    .multipleOf(0.5, 'ต้องเป็นทวีคูณของ 30 นาที (0.5, 1.0, 1.5, …)'),
   rate: z
-    .number({ invalid_type_error: 'Enter a number' })
-    .positive('Rate must be positive')
-    .max(999_999, 'Rate too high'),
+    .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
+    .positive('อัตราต้องมากกว่าศูนย์')
+    .max(999_999, 'อัตราสูงเกินไป'),
   description: z.string().max(500).optional(),
 })
 
@@ -113,9 +113,9 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Log Labor Entry</DialogTitle>
+          <DialogTitle>บันทึกรายการแรงงาน</DialogTitle>
           <DialogDescription>
-            Record hours worked. Entries are visible to managers in the Labor & Cost tab.
+            บันทึกชั่วโมงทำงาน รายการจะแสดงให้ผู้จัดการเห็นในแท็บแรงงานและต้นทุน
           </DialogDescription>
         </DialogHeader>
 
@@ -123,7 +123,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
           {/* Date */}
           <div className="space-y-1.5">
             <Label htmlFor="labor-date">
-              Date <span className="text-destructive">*</span>
+              วันที่ <span className="text-destructive">*</span>
             </Label>
             <Input
               id="labor-date"
@@ -140,7 +140,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="labor-hours">
-                Hours <span className="text-destructive">*</span>
+                ชั่วโมง <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="labor-hours"
@@ -156,7 +156,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="labor-rate">
-                Rate / hr (฿) <span className="text-destructive">*</span>
+                อัตรา/ชม. (฿) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="labor-rate"
@@ -177,7 +177,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
             className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2"
           >
             <Calculator className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm text-muted-foreground">Total cost:</span>
+            <span className="text-sm text-muted-foreground">ต้นทุนรวม:</span>
             <span className="ml-auto text-sm font-semibold">
               ฿{total.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </span>
@@ -185,10 +185,10 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="labor-desc">Notes</Label>
+            <Label htmlFor="labor-desc">หมายเหตุ</Label>
             <Textarea
               id="labor-desc"
-              placeholder="Optional description of work performed…"
+              placeholder="คำอธิบายงานที่ทำ (ไม่บังคับ)…"
               rows={2}
               {...form.register('description')}
             />
@@ -196,11 +196,11 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button type="submit" disabled={addLabor.isPending} className="gap-2">
               {addLabor.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Save Entry
+              บันทึก
             </Button>
           </DialogFooter>
         </form>

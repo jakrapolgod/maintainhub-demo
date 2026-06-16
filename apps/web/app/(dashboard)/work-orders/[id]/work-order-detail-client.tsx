@@ -5,14 +5,14 @@
  *
  * Layout:
  *   - Header: WO number, title, status badge, action buttons
- *   - Tabs: Details | Labor & Cost | Parts | Attachments | Comments | History
+ *   - Tabs: รายละเอียด | แรงงานและต้นทุน | อะไหล่ที่ใช้ | เอกสารแนบ | ความคิดเห็น | ประวัติ
  *   - Each tab content is lazy-loaded and cached independently
  *   - Real-time comments via Socket.io (useWorkOrderRealtime)
  */
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
 import {
   ArrowLeft,
   Pencil,
@@ -84,9 +84,9 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 p-6">
         <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Work order not found.</p>
+        <p className="text-muted-foreground">ไม่พบใบสั่งงาน</p>
         <Button variant="outline" onClick={() => router.back()}>
-          Go back
+          กลับ
         </Button>
       </div>
     )
@@ -120,7 +120,7 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
               )}
               {wo.dueDate && (
                 <span className="text-xs text-muted-foreground">
-                  Due {format(new Date(wo.dueDate), 'MMM d, yyyy')}
+                  ครบกำหนด {formatThaiDate(wo.dueDate)}
                 </span>
               )}
             </div>
@@ -140,7 +140,7 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
                 ) : (
                   <Play className="h-3.5 w-3.5" />
                 )}
-                Start
+                เริ่มงาน
               </Button>
             )}
             {canComplete && (
@@ -151,7 +151,7 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
                 onClick={() => setCompleteDialogOpen(true)}
               >
                 <CheckCircle className="h-3.5 w-3.5" />
-                Complete
+                เสร็จสิ้น
               </Button>
             )}
             {canHold && (
@@ -162,7 +162,7 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
                 onClick={() => setHoldDialogOpen(true)}
               >
                 <PauseCircle className="h-3.5 w-3.5" />
-                Hold
+                ระงับงาน
               </Button>
             )}
             {canCancel && (
@@ -173,13 +173,13 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
                 onClick={() => setCancelDialogOpen(true)}
               >
                 <XCircle className="h-3.5 w-3.5" />
-                Cancel
+                ยกเลิกงาน
               </Button>
             )}
             <Link href={`/work-orders/${id}/edit`}>
               <Button size="sm" variant="outline" className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                แก้ไข
               </Button>
             </Link>
           </div>
@@ -192,12 +192,12 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
           <div className="border-b px-6">
             <TabsList className="h-auto rounded-none bg-transparent p-0 gap-0">
               {[
-                ['details', 'Details', Info],
-                ['labor', 'Labor & Cost', Clock],
-                ['parts', 'Parts', Package],
-                ['attachments', 'Attachments', Paperclip],
-                ['comments', 'Comments', MessageSquare],
-                ['history', 'History', History],
+                ['details', 'รายละเอียด', Info],
+                ['labor', 'แรงงานและต้นทุน', Clock],
+                ['parts', 'อะไหล่ที่ใช้', Package],
+                ['attachments', 'เอกสารแนบ', Paperclip],
+                ['comments', 'ความคิดเห็น', MessageSquare],
+                ['history', 'ประวัติ', History],
               ].map(([value, label, Icon]) => (
                 <TabsTrigger
                   key={value as string}
@@ -251,9 +251,9 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
       />
       <SimpleReasonModal
         open={holdDialogOpen}
-        title="Place on Hold"
-        description="Describe why work is being paused."
-        buttonLabel="Place on Hold"
+        title="ระงับงาน"
+        description="อธิบายเหตุผลที่ระงับงาน"
+        buttonLabel="ยืนยันระงับงาน"
         onClose={() => setHoldDialogOpen(false)}
         onConfirm={(reason) => {
           holdMutation.mutate(reason, {
@@ -264,9 +264,9 @@ export function WorkOrderDetailClient({ id }: { id: string }) {
       />
       <SimpleReasonModal
         open={cancelDialogOpen}
-        title="Cancel Work Order"
-        description="Provide a reason for cancellation."
-        buttonLabel="Cancel Work Order"
+        title="ยกเลิกใบสั่งงาน"
+        description="ระบุเหตุผลในการยกเลิก"
+        buttonLabel="ยืนยันยกเลิก"
         buttonVariant="destructive"
         onClose={() => setCancelDialogOpen(false)}
         onConfirm={(reason) => {
@@ -290,18 +290,18 @@ function DetailsTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Basic Information</CardTitle>
+          <CardTitle className="text-sm">ข้อมูลพื้นฐาน</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <Row label="WO Number" value={<span className="font-mono">{wo.woNumber}</span>} />
-          <Row label="Type" value={wo.type} />
-          <Row label="Priority" value={<PriorityBadge priority={wo.priority} />} />
-          <Row label="Status" value={<StatusBadge status={wo.status} />} />
-          <Row label="Asset" value={wo.assetName} />
-          {wo.assetLocation && <Row label="Location" value={wo.assetLocation} />}
+          <Row label="เลขที่ใบสั่งงาน" value={<span className="font-mono">{wo.woNumber}</span>} />
+          <Row label="ประเภทงาน" value={wo.type} />
+          <Row label="ความเร่งด่วน" value={<PriorityBadge priority={wo.priority} />} />
+          <Row label="สถานะ" value={<StatusBadge status={wo.status} />} />
+          <Row label="สินทรัพย์" value={wo.assetName} />
+          {wo.assetLocation && <Row label="ตำแหน่ง" value={wo.assetLocation} />}
           {wo.description && (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Description</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">รายละเอียด</p>
               <p className="text-sm">{wo.description}</p>
             </div>
           )}
@@ -310,27 +310,21 @@ function DetailsTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Timeline & People</CardTitle>
+          <CardTitle className="text-sm">ไทม์ไลน์และบุคลากร</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <Row label="Created By" value={wo.createdByName} />
-          <Row label="Created At" value={format(new Date(wo.createdAt), 'PPpp')} />
-          {wo.startedAt && (
-            <Row label="Started At" value={format(new Date(wo.startedAt), 'PPpp')} />
-          )}
-          {wo.completedAt && (
-            <Row label="Completed At" value={format(new Date(wo.completedAt), 'PPpp')} />
-          )}
-          {wo.dueDate && <Row label="Due Date" value={format(new Date(wo.dueDate), 'PPpp')} />}
-          {wo.slaDeadline && (
-            <Row label="SLA Deadline" value={format(new Date(wo.slaDeadline), 'PPpp')} />
-          )}
+          <Row label="สร้างโดย" value={wo.createdByName} />
+          <Row label="สร้างเมื่อ" value={formatThaiDateTime(wo.createdAt)} />
+          {wo.startedAt && <Row label="เริ่มเมื่อ" value={formatThaiDateTime(wo.startedAt)} />}
+          {wo.completedAt && <Row label="เสร็จเมื่อ" value={formatThaiDateTime(wo.completedAt)} />}
+          {wo.dueDate && <Row label="วันกำหนดเสร็จ" value={formatThaiDateTime(wo.dueDate)} />}
+          {wo.slaDeadline && <Row label="กำหนด SLA" value={formatThaiDateTime(wo.slaDeadline)} />}
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Assignees</p>
+            <p className="text-xs font-medium text-muted-foreground mb-2">ผู้รับผิดชอบ</p>
             {wo.assignees.length > 0 ? (
               <AssigneeAvatars assignees={wo.assignees} max={6} size="md" />
             ) : (
-              <span className="text-muted-foreground text-xs">Unassigned</span>
+              <span className="text-muted-foreground text-xs">ยังไม่มอบหมาย</span>
             )}
           </div>
         </CardContent>
@@ -338,19 +332,19 @@ function DetailsTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Cost Summary</CardTitle>
+          <CardTitle className="text-sm">สรุปต้นทุน</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <Row
-            label="Labor Cost"
+            label="ต้นทุนแรงงาน"
             value={wo.totalLaborCost != null ? `฿${wo.totalLaborCost.toLocaleString()}` : '—'}
           />
           <Row
-            label="Parts Cost"
+            label="ต้นทุนอะไหล่"
             value={wo.totalPartsCost != null ? `฿${wo.totalPartsCost.toLocaleString()}` : '—'}
           />
           <Row
-            label="Total Cost"
+            label="ต้นทุนรวม"
             value={
               wo.totalLaborCost != null && wo.totalPartsCost != null ? (
                 <strong>฿{(wo.totalLaborCost + wo.totalPartsCost).toLocaleString()}</strong>
@@ -365,7 +359,7 @@ function DetailsTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
       {wo.resolution && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Resolution</CardTitle>
+            <CardTitle className="text-sm">ผลการดำเนินการ</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-wrap">{wo.resolution}</p>
@@ -398,9 +392,9 @@ function LaborTab({ woId }: { woId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <StatCard label="Total Hours" value={`${totalHours.toFixed(1)}h`} />
-        <StatCard label="Total Cost" value={`฿${totalCost.toLocaleString()}`} />
-        <StatCard label="Entries" value={String(entries.length)} />
+        <StatCard label="ชั่วโมงรวม" value={`${totalHours.toFixed(1)}h`} />
+        <StatCard label="ต้นทุนรวม" value={`฿${totalCost.toLocaleString()}`} />
+        <StatCard label="รายการ" value={String(entries.length)} />
       </div>
 
       <Card>
@@ -408,7 +402,7 @@ function LaborTab({ woId }: { woId: string }) {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50">
               <tr>
-                {['Technician', 'Date', 'Hours', 'Rate/hr', 'Total', 'Notes'].map((h) => (
+                {['ช่างเทคนิค', 'วันที่', 'ชั่วโมง', 'อัตรา/ชม.', 'รวม', 'หมายเหตุ'].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
@@ -434,7 +428,7 @@ function LaborTab({ woId }: { woId: string }) {
               {entries.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-muted-foreground text-sm">
-                    No labor entries yet.
+                    ยังไม่มีรายการแรงงาน
                   </td>
                 </tr>
               )}
@@ -458,8 +452,8 @@ function PartsTab({ woId }: { woId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <StatCard label="Parts Used" value={String(usages.length)} />
-        <StatCard label="Total Cost" value={`฿${totalCost.toLocaleString()}`} />
+        <StatCard label="อะไหล่ที่ใช้" value={String(usages.length)} />
+        <StatCard label="ต้นทุนรวม" value={`฿${totalCost.toLocaleString()}`} />
       </div>
 
       <Card>
@@ -467,7 +461,7 @@ function PartsTab({ woId }: { woId: string }) {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50">
               <tr>
-                {['Part Number', 'Name', 'Qty', 'Unit Cost', 'Total', 'Used At'].map((h) => (
+                {['รหัสอะไหล่', 'ชื่อ', 'จำนวน', 'ราคาต่อหน่วย', 'รวม', 'ใช้เมื่อ'].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
@@ -486,14 +480,14 @@ function PartsTab({ woId }: { woId: string }) {
                   <td className="px-4 py-3">฿{u.unitCost}</td>
                   <td className="px-4 py-3 font-medium">฿{u.totalCost.toLocaleString()}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {format(new Date(u.usedAt), 'MMM d, yyyy')}
+                    {formatThaiDate(u.usedAt)}
                   </td>
                 </tr>
               ))}
               {usages.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-muted-foreground text-sm">
-                    No parts used yet.
+                    ยังไม่มีการใช้อะไหล่
                   </td>
                 </tr>
               )}
@@ -537,7 +531,7 @@ function AttachmentsTab({ woId }: { woId: string }) {
           ) : (
             <Upload className="h-4 w-4" />
           )}
-          Upload File
+          อัปโหลดไฟล์
         </Button>
         <input
           ref={fileInputRef}
@@ -551,9 +545,9 @@ function AttachmentsTab({ woId }: { woId: string }) {
       {files.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed p-12 text-center">
           <Paperclip className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
-          <p className="text-muted-foreground text-sm">No attachments yet.</p>
+          <p className="text-muted-foreground text-sm">ยังไม่มีเอกสารแนบ</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Upload images, PDFs, or Word documents (max 20 MB).
+            อัปโหลดรูปภาพ PDF หรือ Word (สูงสุด 20 MB)
           </p>
         </div>
       ) : (
@@ -620,7 +614,7 @@ function CommentsTab({ woId }: { woId: string }) {
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-medium">{c.authorName}</span>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(c.createdAt), 'PPp')}
+                  {formatThaiDateTime(c.createdAt)}
                 </span>
               </div>
               <div className="rounded-lg bg-muted px-3 py-2 text-sm whitespace-pre-wrap">
@@ -631,7 +625,7 @@ function CommentsTab({ woId }: { woId: string }) {
         ))}
         {comments.length === 0 && (
           <div className="py-8 text-center text-muted-foreground text-sm">
-            No comments yet. Start the conversation.
+            ยังไม่มีความคิดเห็น เริ่มการสนทนาได้เลย
           </div>
         )}
         <div ref={endRef} />
@@ -640,7 +634,7 @@ function CommentsTab({ woId }: { woId: string }) {
       {/* Comment input */}
       <div className="border-t pt-4 flex gap-2">
         <Textarea
-          placeholder="Add a comment… (@mention users with @userId)"
+          placeholder="เพิ่มความคิดเห็น… (@กล่าวถึงผู้ใช้ด้วย @userId)"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => {
@@ -663,7 +657,7 @@ function CommentsTab({ woId }: { woId: string }) {
         </Button>
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">
-        Ctrl+Enter to send · Real-time via Socket.io
+        Ctrl+Enter เพื่อส่ง · แบบเรียลไทม์ผ่าน Socket.io
       </p>
     </div>
   )
@@ -683,12 +677,12 @@ function HistoryTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-sm font-medium">{e.userName ?? 'System'}</span>
+              <span className="text-sm font-medium">{e.userName ?? 'ระบบ'}</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 {e.action}
               </Badge>
               <span className="text-xs text-muted-foreground ml-auto">
-                {format(new Date(e.createdAt), 'PPp')}
+                {formatThaiDateTime(e.createdAt)}
               </span>
             </div>
             {e.after !== null &&
@@ -703,7 +697,9 @@ function HistoryTab({ wo }: { wo: import('@/lib/api/work-orders').WorkOrderDetai
         </div>
       ))}
       {entries.length === 0 && (
-        <p className="py-8 text-center text-muted-foreground text-sm">No audit entries yet.</p>
+        <p className="py-8 text-center text-muted-foreground text-sm">
+          ยังไม่มีประวัติการดำเนินการ
+        </p>
       )}
     </div>
   )
@@ -739,15 +735,15 @@ function CompleteModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <CardTitle>Complete Work Order</CardTitle>
+          <CardTitle>ยืนยันการเสร็จสิ้นงาน</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
-              Resolution <span className="text-destructive">*</span>
+              ผลการดำเนินการ <span className="text-destructive">*</span>
             </label>
             <Textarea
-              placeholder="Describe what was done and the outcome (min. 10 characters)…"
+              placeholder="อธิบายสิ่งที่ดำเนินการและผลลัพธ์ (อย่างน้อย 10 ตัวอักษร)…"
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
               rows={4}
@@ -755,7 +751,7 @@ function CompleteModal({
           </div>
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button
               disabled={resolution.trim().length < 10 || isPending}
@@ -763,7 +759,7 @@ function CompleteModal({
               className="gap-2 bg-green-600 hover:bg-green-700"
             >
               {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Mark Complete
+              ยืนยันเสร็จสิ้น
             </Button>
           </div>
         </CardContent>
@@ -801,10 +797,10 @@ function SimpleReasonModal({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">{description}</p>
-          <Input placeholder="Reason…" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Input placeholder="เหตุผล…" value={reason} onChange={(e) => setReason(e.target.value)} />
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button
               variant={buttonVariant}

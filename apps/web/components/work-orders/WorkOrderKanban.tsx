@@ -45,12 +45,12 @@ interface KanbanColumn {
 }
 
 const COLUMNS: KanbanColumn[] = [
-  { status: 'DRAFT', label: 'Draft', accent: 'bg-slate-400' },
-  { status: 'OPEN', label: 'Open', accent: 'bg-blue-500' },
-  { status: 'IN_PROGRESS', label: 'In Progress', accent: 'bg-amber-500' },
-  { status: 'ON_HOLD', label: 'On Hold', accent: 'bg-violet-500' },
-  { status: 'COMPLETED', label: 'Completed', accent: 'bg-emerald-500' },
-  { status: 'CANCELLED', label: 'Cancelled', accent: 'bg-red-500' },
+  { status: 'DRAFT', label: 'ร่าง', accent: 'bg-slate-400' },
+  { status: 'OPEN', label: 'เปิด', accent: 'bg-blue-500' },
+  { status: 'IN_PROGRESS', label: 'กำลังดำเนินการ', accent: 'bg-amber-500' },
+  { status: 'ON_HOLD', label: 'ระงับชั่วคราว', accent: 'bg-violet-500' },
+  { status: 'COMPLETED', label: 'เสร็จสิ้น', accent: 'bg-emerald-500' },
+  { status: 'CANCELLED', label: 'ยกเลิก', accent: 'bg-red-500' },
 ]
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ function DroppableColumn({
         ))}
         {items.length === 0 && (
           <div className="flex flex-1 items-center justify-center py-6 text-xs text-muted-foreground">
-            Drop here
+            วางที่นี่
           </div>
         )}
       </div>

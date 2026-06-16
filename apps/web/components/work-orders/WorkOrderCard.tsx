@@ -13,7 +13,7 @@
  * visual triage at a glance.
  */
 import { isAfter } from 'date-fns'
-import { format } from 'date-fns'
+import { formatThaiDateShort } from '@/lib/formatThaiDate'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
@@ -107,10 +107,10 @@ export function WorkOrderCard({
                 'flex items-center gap-0.5 text-[11px]',
                 isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground',
               )}
-              title={isOverdue ? 'SLA breached' : undefined}
+              title={isOverdue ? 'เกิน SLA' : undefined}
             >
               <Calendar className="h-3 w-3" aria-hidden />
-              {format(new Date(wo.dueDate), 'MMM d')}
+              {formatThaiDateShort(wo.dueDate)}
               {isOverdue && ' ⚠'}
             </span>
           )}

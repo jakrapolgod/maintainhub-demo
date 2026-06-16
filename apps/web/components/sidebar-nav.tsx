@@ -12,18 +12,18 @@ import {
 } from 'lucide-react'
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/work-orders', label: 'Work Orders', icon: Wrench },
-  { href: '/assets', label: 'Assets', icon: Package2 },
-  { href: '/pm-schedules', label: 'PM Schedules', icon: CalendarCheck },
-  { href: '/analytics', label: 'Analytics', icon: BarChart2 },
-  { href: '/inventory', label: 'Inventory', icon: ClipboardList },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard', label: 'แผงควบคุม', icon: LayoutDashboard },
+  { href: '/work-orders', label: 'ใบสั่งงาน', icon: Wrench },
+  { href: '/assets', label: 'สินทรัพย์', icon: Package2 },
+  { href: '/pm-schedules', label: 'แผนบำรุงรักษา', icon: CalendarCheck },
+  { href: '/analytics', label: 'วิเคราะห์ข้อมูล', icon: BarChart2 },
+  { href: '/inventory', label: 'คลังอะไหล่', icon: ClipboardList },
+  { href: '/settings', label: 'ตั้งค่า', icon: Settings },
 ] as const
 
 const SETTINGS_SUB = [
-  { href: '/settings', label: 'General' },
-  { href: '/settings/users', label: 'Users' },
+  { href: '/settings', label: 'ทั่วไป' },
+  { href: '/settings/users', label: 'ผู้ใช้งาน' },
 ] as const
 
 function cn(...c: (string | boolean | undefined)[]) {

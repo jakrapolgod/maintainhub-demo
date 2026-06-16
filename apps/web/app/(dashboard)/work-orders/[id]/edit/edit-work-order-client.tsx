@@ -10,34 +10,40 @@
  *   - Optimistic update via useUpdateWorkOrder (rolls back on error)
  */
 import { useEffect, useMemo, useState } from 'react'
-import { useRouter }                    from 'next/navigation'
-import { useForm, Controller }          from 'react-hook-form'
-import { zodResolver }                  from '@hookform/resolvers/zod'
-import { z }                            from 'zod'
-import { ArrowLeft, Loader2, Eye }      from 'lucide-react'
-import { toast }                        from 'sonner'
+import { useRouter } from 'next/navigation'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft, Loader2, Eye } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button }            from '@/components/ui/button'
-import { Input }             from '@/components/ui/input'
-import { Label }             from '@/components/ui/label'
-import { Textarea }          from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge }             from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton }          from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 import { useWorkOrder, useUpdateWorkOrder } from '@/hooks/useWorkOrders'
-import { useMe }                            from '@/hooks/use-auth'
+import { useMe } from '@/hooks/use-auth'
 import type { WOPriority, UpdateWorkOrderPayload } from '@/lib/api/work-orders'
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 const managerSchema = z.object({
-  title:       z.string().min(3).max(200).optional(),
+  title: z.string().min(3).max(200).optional(),
   description: z.string().max(5000).optional(),
-  priority:    z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
-  dueDate:     z.string().optional(),
-  assigneeIds: z.string().optional(),   // comma-separated CUIDs in the form
+  priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
+  dueDate: z.string().optional(),
+  assigneeIds: z.string().optional(), // comma-separated CUIDs in the form
 })
 
 type EditFormValues = z.infer<typeof managerSchema>
@@ -46,15 +52,15 @@ type EditFormValues = z.infer<typeof managerSchema>
 
 export function EditWorkOrderClient({ id }: { id: string }) {
   const router = useRouter()
-  const { data: wo,   isPending: woLoading }  = useWorkOrder(id)
-  const { data: me,   isPending: meLoading }  = useMe()
+  const { data: wo, isPending: woLoading } = useWorkOrder(id)
+  const { data: me, isPending: meLoading } = useMe()
   const updateMutation = useUpdateWorkOrder(id)
 
   const isTechnician = me?.role === 'TECHNICIAN'
-  const isLoading    = woLoading || meLoading
+  const isLoading = woLoading || meLoading
 
   const form = useForm<EditFormValues>({
-    resolver:      zodResolver(managerSchema),
+    resolver: zodResolver(managerSchema),
     defaultValues: {},
   })
 
@@ -62,10 +68,10 @@ export function EditWorkOrderClient({ id }: { id: string }) {
   useEffect(() => {
     if (!wo) return
     form.reset({
-      title:       wo.title,
+      title: wo.title,
       description: wo.description ?? '',
-      priority:    wo.priority,
-      dueDate:     wo.dueDate ? wo.dueDate.slice(0, 16) : '',
+      priority: wo.priority,
+      dueDate: wo.dueDate ? wo.dueDate.slice(0, 16) : '',
       assigneeIds: wo.assigneeIds.join(', '),
     })
   }, [wo, form])
@@ -77,13 +83,17 @@ export function EditWorkOrderClient({ id }: { id: string }) {
     const changes: Array<{ field: string; from: string; to: string }> = []
 
     if (watched.title !== undefined && watched.title !== wo.title) {
-      changes.push({ field: 'Title', from: wo.title, to: watched.title })
+      changes.push({ field: 'ชื่องาน', from: wo.title, to: watched.title })
     }
     if (watched.description !== undefined && watched.description !== (wo.description ?? '')) {
-      changes.push({ field: 'Description', from: wo.description ?? '(empty)', to: watched.description || '(empty)' })
+      changes.push({
+        field: 'รายละเอียด',
+        from: wo.description ?? '(ว่าง)',
+        to: watched.description || '(ว่าง)',
+      })
     }
     if (!isTechnician && watched.priority && watched.priority !== wo.priority) {
-      changes.push({ field: 'Priority', from: wo.priority, to: watched.priority })
+      changes.push({ field: 'ความเร่งด่วน', from: wo.priority, to: watched.priority })
     }
 
     return changes
@@ -103,7 +113,10 @@ export function EditWorkOrderClient({ id }: { id: string }) {
         payload.dueDate = values.dueDate
       }
       if (values.assigneeIds !== undefined) {
-        const ids = values.assigneeIds.split(',').map((s) => s.trim()).filter(Boolean)
+        const ids = values.assigneeIds
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
         if (ids.join(',') !== wo?.assigneeIds.join(',')) {
           payload.assigneeIds = ids
         }
@@ -119,28 +132,27 @@ export function EditWorkOrderClient({ id }: { id: string }) {
   function onSubmit(values: EditFormValues) {
     const payload = buildPayload(values)
     if (Object.keys(payload).length === 0) {
-      toast.info('No changes to save.')
+      toast.info('ไม่มีการเปลี่ยนแปลงที่จะบันทึก')
       return
     }
 
     updateMutation.mutate(payload, {
       onSuccess: () => {
-        toast.success('Work order updated')
+        toast.success('อัปเดตใบสั่งงานแล้ว')
         router.push(`/work-orders/${id}`)
       },
     })
   }
 
-  if (isLoading) return (
-    <div className="p-6 space-y-4">
-      <Skeleton className="h-8 w-64" />
-      <Skeleton className="h-96 w-full rounded-xl" />
-    </div>
-  )
+  if (isLoading)
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-96 w-full rounded-xl" />
+      </div>
+    )
 
-  if (!wo) return (
-    <div className="p-6 text-center text-muted-foreground">Work order not found.</div>
-  )
+  if (!wo) return <div className="p-6 text-center text-muted-foreground">ไม่พบใบสั่งงาน</div>
 
   const isTerminal = wo.status === 'COMPLETED' || wo.status === 'CANCELLED'
 
@@ -152,13 +164,20 @@ export function EditWorkOrderClient({ id }: { id: string }) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold">Edit Work Order</h1>
-          <p className="text-sm text-muted-foreground font-mono">{wo.woNumber} · {wo.title}</p>
+          <h1 className="text-xl font-bold">แก้ไขใบสั่งงาน</h1>
+          <p className="text-sm text-muted-foreground font-mono">
+            {wo.woNumber} · {wo.title}
+          </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => router.push(`/work-orders/${id}`)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => router.push(`/work-orders/${id}`)}
+          >
             <Eye className="h-3.5 w-3.5" />
-            View
+            ดู
           </Button>
         </div>
       </div>
@@ -166,43 +185,43 @@ export function EditWorkOrderClient({ id }: { id: string }) {
       {/* Body */}
       <div className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-2xl space-y-6">
-
           {/* Role restriction notice */}
           {isTechnician && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <strong>Technician role</strong> — you can only edit the description field.
+              <strong>บทบาทช่างเทคนิค</strong> — คุณสามารถแก้ไขได้เฉพาะช่องรายละเอียดเท่านั้น
             </div>
           )}
 
           {/* Terminal state notice */}
           {isTerminal && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              This work order is <strong>{wo.status}</strong> and cannot be edited.
+              ใบสั่งงานนี้มีสถานะ <strong>{wo.status}</strong> และไม่สามารถแก้ไขได้
             </div>
           )}
 
           <Card>
             <CardHeader>
-              <CardTitle>Edit Details</CardTitle>
-              <CardDescription>Changes will be logged in the audit trail.</CardDescription>
+              <CardTitle>แก้ไขรายละเอียด</CardTitle>
+              <CardDescription>การเปลี่ยนแปลงจะถูกบันทึกในประวัติการตรวจสอบ</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-
                 {/* Title — MANAGER/ADMIN only */}
                 {!isTechnician && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="title">Title</Label>
+                    <Label htmlFor="title">ชื่องาน</Label>
                     <Input id="title" {...form.register('title')} disabled={isTerminal} />
                     {form.formState.errors.title && (
-                      <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.title.message}
+                      </p>
                     )}
                   </div>
                 )}
 
                 {/* Description — all roles */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">รายละเอียด</Label>
                   <Textarea
                     id="description"
                     rows={4}
@@ -214,20 +233,24 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                 {/* Priority — MANAGER/ADMIN only */}
                 {!isTechnician && (
                   <div className="space-y-1.5">
-                    <Label>Priority</Label>
+                    <Label>ความเร่งด่วน</Label>
                     <Controller
                       name="priority"
                       control={form.control}
                       render={({ field }) => (
-                        <Select value={field.value ?? ''} onValueChange={field.onChange} disabled={isTerminal}>
+                        <Select
+                          value={field.value ?? ''}
+                          onValueChange={field.onChange}
+                          disabled={isTerminal}
+                        >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="CRITICAL">Critical</SelectItem>
-                            <SelectItem value="HIGH">High</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="LOW">Low</SelectItem>
+                            <SelectItem value="CRITICAL">วิกฤต</SelectItem>
+                            <SelectItem value="HIGH">สูง</SelectItem>
+                            <SelectItem value="MEDIUM">ปานกลาง</SelectItem>
+                            <SelectItem value="LOW">ต่ำ</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
@@ -238,7 +261,7 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                 {/* Due date — MANAGER/ADMIN only */}
                 {!isTechnician && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Label htmlFor="dueDate">วันกำหนดเสร็จ</Label>
                     <Input
                       id="dueDate"
                       type="datetime-local"
@@ -251,26 +274,33 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                 {/* Assignee IDs — MANAGER/ADMIN only */}
                 {!isTechnician && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="assigneeIds">Assignee IDs</Label>
+                    <Label htmlFor="assigneeIds">รหัสผู้รับผิดชอบ</Label>
                     <Input
                       id="assigneeIds"
-                      placeholder="cuid1, cuid2, …  (comma-separated)"
+                      placeholder="cuid1, cuid2, …  (คั่นด้วยจุลภาค)"
                       {...form.register('assigneeIds')}
                       disabled={isTerminal}
                     />
-                    <p className="text-xs text-muted-foreground">Current: {wo.assigneeIds.length > 0 ? wo.assigneeIds.join(', ') : 'Unassigned'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      ปัจจุบัน:{' '}
+                      {wo.assigneeIds.length > 0 ? wo.assigneeIds.join(', ') : 'ยังไม่มอบหมาย'}
+                    </p>
                   </div>
                 )}
 
                 {/* Actions */}
                 {!isTerminal && (
                   <div className="flex gap-3 pt-2">
-                    <Button type="submit" disabled={updateMutation.isPending || diff.length === 0} className="gap-2">
+                    <Button
+                      type="submit"
+                      disabled={updateMutation.isPending || diff.length === 0}
+                      className="gap-2"
+                    >
                       {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Save Changes
+                      บันทึกการเปลี่ยนแปลง
                     </Button>
                     <Button type="button" variant="outline" onClick={() => router.back()}>
-                      Discard
+                      ยกเลิก
                     </Button>
                   </div>
                 )}
@@ -282,16 +312,22 @@ export function EditWorkOrderClient({ id }: { id: string }) {
           {diff.length > 0 && (
             <Card className="border-amber-200 bg-amber-50/50">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-amber-800">Pending Changes</CardTitle>
+                <CardTitle className="text-sm text-amber-800">
+                  การเปลี่ยนแปลงที่รอดำเนินการ
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {diff.map((d) => (
                   <div key={d.field} className="text-xs rounded-md bg-white border p-2.5">
                     <p className="font-semibold text-muted-foreground mb-1">{d.field}</p>
                     <div className="flex gap-2">
-                      <div className="flex-1 rounded bg-red-50 px-2 py-1 text-red-700 line-clamp-1">{d.from}</div>
+                      <div className="flex-1 rounded bg-red-50 px-2 py-1 text-red-700 line-clamp-1">
+                        {d.from}
+                      </div>
                       <span className="text-muted-foreground self-center">→</span>
-                      <div className="flex-1 rounded bg-green-50 px-2 py-1 text-green-700 line-clamp-1">{d.to}</div>
+                      <div className="flex-1 rounded bg-green-50 px-2 py-1 text-green-700 line-clamp-1">
+                        {d.to}
+                      </div>
                     </div>
                   </div>
                 ))}

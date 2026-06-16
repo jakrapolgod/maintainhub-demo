@@ -34,11 +34,11 @@ import type { WOType, WOPriority } from '@/lib/api/work-orders'
 // ── Form schema ───────────────────────────────────────────────────────────────
 
 const createSchema = z.object({
-  title: z.string().min(3, 'At least 3 characters').max(200),
+  title: z.string().min(3, 'ต้องมีอย่างน้อย 3 ตัวอักษร').max(200),
   description: z.string().max(5000).optional(),
   type: z.enum(['CORRECTIVE', 'PREVENTIVE', 'INSPECTION', 'EMERGENCY']),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
-  assetId: z.string().min(1, 'Asset is required'),
+  assetId: z.string().min(1, 'กรุณาเลือกสินทรัพย์'),
   dueDate: z.string().optional(),
 })
 
@@ -80,7 +80,7 @@ export function NewWorkOrderClient() {
       },
       {
         onSuccess: (result) => {
-          toast.success(`Work order ${result.woNumber} created`)
+          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว`)
           router.push(`/work-orders/${result.id}`)
         },
       },
@@ -95,10 +95,8 @@ export function NewWorkOrderClient() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold">New Work Order</h1>
-          <p className="text-sm text-muted-foreground">
-            Choose how you want to create the work order.
-          </p>
+          <h1 className="text-xl font-bold">สร้างใบสั่งงาน</h1>
+          <p className="text-sm text-muted-foreground">เลือกวิธีสร้างใบสั่งงาน</p>
         </div>
 
         {/* Mode toggle */}
@@ -113,7 +111,7 @@ export function NewWorkOrderClient() {
             }}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            AI Chat
+            แชท AI
           </Button>
           <Button
             variant={mode === 'manual' ? 'default' : 'ghost'}
@@ -125,7 +123,7 @@ export function NewWorkOrderClient() {
             }}
           >
             <ClipboardList className="h-3.5 w-3.5" />
-            Manual Form
+            กรอกฟอร์ม
           </Button>
         </div>
       </div>
@@ -135,35 +133,32 @@ export function NewWorkOrderClient() {
         {mode === 'ai' ? (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
             <Sparkles className="h-12 w-12 text-primary/50" />
-            <h2 className="text-lg font-semibold">AI Work Order Assistant</h2>
+            <h2 className="text-lg font-semibold">ผู้ช่วย AI สร้างใบสั่งงาน</h2>
             <p className="text-muted-foreground text-sm max-w-md">
-              Describe the maintenance issue in plain language and Claude will generate a complete
-              work order for you.
+              อธิบายปัญหาการซ่อมบำรุงเป็นภาษาธรรมชาติ แล้ว Claude จะสร้างใบสั่งงานให้โดยอัตโนมัติ
             </p>
             <Button onClick={() => setAiDrawerOpen(true)} className="gap-2">
               <Sparkles className="h-4 w-4" />
-              Open AI Chat
+              เปิดแชท AI
             </Button>
           </div>
         ) : (
           <div className="mx-auto max-w-2xl">
             <Card>
               <CardHeader>
-                <CardTitle>Work Order Details</CardTitle>
-                <CardDescription>
-                  Fill in the required fields to create a new work order.
-                </CardDescription>
+                <CardTitle>รายละเอียดใบสั่งงาน</CardTitle>
+                <CardDescription>กรอกข้อมูลที่จำเป็นเพื่อสร้างใบสั่งงานใหม่</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                   {/* Title */}
                   <div className="space-y-1.5">
                     <Label htmlFor="title">
-                      Title <span className="text-destructive">*</span>
+                      ชื่องาน <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="title"
-                      placeholder="e.g. Replace mechanical seal on Pump P-101"
+                      placeholder="เช่น เปลี่ยน mechanical seal บนปั๊ม P-101"
                       {...form.register('title')}
                     />
                     {form.formState.errors.title && (
@@ -175,10 +170,10 @@ export function NewWorkOrderClient() {
 
                   {/* Description */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="description">Description</Label>
+                    <Label htmlFor="description">รายละเอียด</Label>
                     <Textarea
                       id="description"
-                      placeholder="Describe the issue, symptoms, and any relevant context…"
+                      placeholder="อธิบายปัญหา อาการผิดปกติ และบริบทที่เกี่ยวข้อง…"
                       rows={4}
                       {...form.register('description')}
                     />
@@ -188,7 +183,7 @@ export function NewWorkOrderClient() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label>
-                        Type <span className="text-destructive">*</span>
+                        ประเภทงาน <span className="text-destructive">*</span>
                       </Label>
                       <Select
                         value={form.watch('type')}
@@ -198,17 +193,17 @@ export function NewWorkOrderClient() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CORRECTIVE">Corrective</SelectItem>
-                          <SelectItem value="PREVENTIVE">Preventive</SelectItem>
-                          <SelectItem value="INSPECTION">Inspection</SelectItem>
-                          <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                          <SelectItem value="CORRECTIVE">งานแก้ไข</SelectItem>
+                          <SelectItem value="PREVENTIVE">งานป้องกัน</SelectItem>
+                          <SelectItem value="INSPECTION">งานตรวจสอบ</SelectItem>
+                          <SelectItem value="EMERGENCY">งานฉุกเฉิน</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-1.5">
                       <Label>
-                        Priority <span className="text-destructive">*</span>
+                        ความเร่งด่วน <span className="text-destructive">*</span>
                       </Label>
                       <Select
                         value={form.watch('priority')}
@@ -218,10 +213,10 @@ export function NewWorkOrderClient() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CRITICAL">Critical</SelectItem>
-                          <SelectItem value="HIGH">High</SelectItem>
-                          <SelectItem value="MEDIUM">Medium</SelectItem>
-                          <SelectItem value="LOW">Low</SelectItem>
+                          <SelectItem value="CRITICAL">วิกฤต</SelectItem>
+                          <SelectItem value="HIGH">สูง</SelectItem>
+                          <SelectItem value="MEDIUM">ปานกลาง</SelectItem>
+                          <SelectItem value="LOW">ต่ำ</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -230,22 +225,26 @@ export function NewWorkOrderClient() {
                   {/* Asset ID */}
                   <div className="space-y-1.5">
                     <Label htmlFor="assetId">
-                      Asset ID <span className="text-destructive">*</span>
+                      รหัสสินทรัพย์ <span className="text-destructive">*</span>
                     </Label>
-                    <Input id="assetId" placeholder="Asset CUID" {...form.register('assetId')} />
+                    <Input
+                      id="assetId"
+                      placeholder="CUID ของสินทรัพย์"
+                      {...form.register('assetId')}
+                    />
                     {form.formState.errors.assetId && (
                       <p className="text-xs text-destructive">
                         {form.formState.errors.assetId.message}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      Enter the asset CUID from the asset registry.
+                      กรอก CUID ของสินทรัพย์จากทะเบียนสินทรัพย์
                     </p>
                   </div>
 
                   {/* Due date */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Label htmlFor="dueDate">วันกำหนดเสร็จ</Label>
                     <Input id="dueDate" type="datetime-local" {...form.register('dueDate')} />
                   </div>
 
@@ -253,10 +252,10 @@ export function NewWorkOrderClient() {
                   <div className="flex items-center gap-3 pt-2">
                     <Button type="submit" disabled={createMutation.isPending} className="gap-2">
                       {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                      Create Work Order
+                      สร้างใบสั่งงาน
                     </Button>
                     <Button type="button" variant="outline" onClick={() => router.back()}>
-                      Cancel
+                      ยกเลิก
                     </Button>
                   </div>
                 </form>

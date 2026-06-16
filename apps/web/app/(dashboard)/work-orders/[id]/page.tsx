@@ -3,13 +3,9 @@ import type { Metadata } from 'next'
 import { WorkOrderDetailClient } from './work-order-detail-client'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export const metadata: Metadata = { title: 'Work Order Detail' }
+export const metadata: Metadata = { title: 'รายละเอียดใบสั่งงาน' }
 
-export default async function WorkOrderDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+export default async function WorkOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   return (
     <Suspense fallback={<DetailSkeleton />}>

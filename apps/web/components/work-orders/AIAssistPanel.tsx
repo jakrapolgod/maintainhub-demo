@@ -115,18 +115,18 @@ export interface AIAssistPanelProps {
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
-  content: `Hello! I can create a work order from plain language.
+  content: `สวัสดี! ฉันสามารถสร้างใบสั่งงานจากภาษาธรรมชาติได้
 
-Try: *"Pump P-101 is leaking badly, critical priority"*
+ลองพิมพ์: *"ปั๊ม P-101 รั่วมาก ความเร่งด่วนวิกฤต"*
 
-Or select an asset below for richer context — I'll use its maintenance history to suggest the right priority and type.`,
+หรือเลือกสินทรัพย์ด้านล่างเพื่อให้บริบทดีขึ้น — ฉันจะใช้ประวัติการซ่อมบำรุงเพื่อแนะนำความเร่งด่วนและประเภทงาน`,
 }
 
 const TYPE_LABELS: Record<WOType, string> = {
-  CORRECTIVE: 'Corrective',
-  PREVENTIVE: 'Preventive',
-  INSPECTION: 'Inspection',
-  EMERGENCY: 'Emergency',
+  CORRECTIVE: 'งานแก้ไข',
+  PREVENTIVE: 'งานป้องกัน',
+  INSPECTION: 'งานตรวจสอบ',
+  EMERGENCY: 'งานฉุกเฉิน',
 }
 
 const TYPE_VARIANT: Record<WOType, 'default' | 'secondary' | 'warning' | 'info' | 'destructive'> = {
@@ -304,7 +304,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
 
           // Build the full response text to stream
           const responseText = [
-            `Here's a draft work order based on your description:\n\n`,
+            `นี่คือร่างใบสั่งงานตามที่คุณอธิบาย:\n\n`,
             `**${draft.title}**\n\n`,
             draft.description,
           ].join('')
@@ -353,7 +353,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
   function handleConfirm() {
     if (!currentDraft) return
     if (!currentDraft.assetId) {
-      toast.warning('No asset selected — please edit the form to choose an asset first.')
+      toast.warning('ยังไม่เลือกสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อน')
       handleEdit()
       return
     }
@@ -372,12 +372,12 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
       },
       {
         onSuccess: (result) => {
-          toast.success(`Work order ${result.woNumber} created!`)
+          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว!`)
           onClose()
           router.push(`/work-orders/${result.id}`)
         },
         onError: (err) => {
-          toast.error(err instanceof Error ? err.message : 'Failed to create work order')
+          toast.error(err instanceof Error ? err.message : 'สร้างใบสั่งงานไม่สำเร็จ')
         },
       },
     )
@@ -453,7 +453,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Sparkles className="h-3.5 w-3.5" />
             </div>
-            <SheetTitle className="text-base">AI Work Order Assistant</SheetTitle>
+            <SheetTitle className="text-base">ผู้ช่วย AI สร้างใบสั่งงาน</SheetTitle>
           </div>
           <div className="flex items-center gap-1">
             {(messages.length > 1 || currentDraft) && (
@@ -464,7 +464,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
                 className="h-8 gap-1.5 text-xs"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                New
+                เริ่มใหม่
               </Button>
             )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
@@ -493,7 +493,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
         {/* ── Draft action bar ─────────────────────────────────────────────── */}
         {currentDraft && !isStreaming && (
           <div className="shrink-0 border-t bg-muted/30 px-4 py-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Ready to create:</p>
+            <p className="text-xs font-medium text-muted-foreground">พร้อมสร้างใบสั่งงาน:</p>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -506,20 +506,20 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
                 ) : (
                   <CheckCircle className="h-3.5 w-3.5" />
                 )}
-                Create Work Order
+                สร้างใบสั่งงาน
               </Button>
               <Button size="sm" variant="outline" onClick={handleEdit} className="gap-1.5">
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                แก้ไข
               </Button>
-              <Button size="sm" variant="ghost" onClick={handleStartOver} title="Start over">
+              <Button size="sm" variant="ghost" onClick={handleStartOver} title="เริ่มใหม่">
                 <RefreshCw className="h-3.5 w-3.5" />
               </Button>
             </div>
             {!currentDraft.assetId && (
               <p className="text-xs text-amber-600 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3 shrink-0" />
-                No asset — click Edit to select one before creating.
+                ยังไม่เลือกสินทรัพย์ — คลิก แก้ไข เพื่อเลือกก่อนสร้าง
               </p>
             )}
           </div>
@@ -550,9 +550,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
               <Textarea
                 ref={textareaRef}
                 placeholder={
-                  isListening
-                    ? 'Listening… speak now'
-                    : 'Describe the maintenance issue… (Enter to send)'
+                  isListening ? 'กำลังฟัง… พูดได้เลย' : 'อธิบายปัญหาการซ่อมบำรุง… (Enter เพื่อส่ง)'
                 }
                 value={input}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
@@ -577,7 +575,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
                   size="icon"
                   className="h-8 w-8"
                   onClick={toggleVoice}
-                  title={isListening ? 'Stop listening' : 'Voice input'}
+                  title={isListening ? 'หยุดฟัง' : 'รับเสียง'}
                 >
                   {isListening ? (
                     <MicOff className="h-3.5 w-3.5" />
@@ -593,7 +591,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
                 className="h-8 w-8"
                 onClick={handleSend}
                 disabled={!input.trim() || draftMutation.isPending || isStreaming}
-                title="Send (Enter)"
+                title="ส่ง (Enter)"
               >
                 {draftMutation.isPending || isStreaming ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -605,7 +603,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground">
-            Powered by Claude · Shift+Enter for newline · Always review before saving
+            ขับเคลื่อนโดย Claude · Shift+Enter ขึ้นบรรทัดใหม่ · ตรวจสอบก่อนบันทึกเสมอ
           </p>
         </div>
       </SheetContent>
@@ -706,7 +704,7 @@ function WorkOrderPreview({ draft }: { draft: WorkOrderDraft }) {
     <div className="w-full rounded-xl border-2 border-primary/20 bg-primary/5 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/70">
-          Draft Work Order
+          ร่างใบสั่งงาน
         </span>
         <div className="flex items-center gap-1.5">
           <Badge
@@ -723,11 +721,11 @@ function WorkOrderPreview({ draft }: { draft: WorkOrderDraft }) {
       <p className="text-xs text-muted-foreground line-clamp-3">{draft.description}</p>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {draft.estimatedHours !== undefined && <span>~{draft.estimatedHours}h estimated</span>}
+        {draft.estimatedHours !== undefined && <span>~{draft.estimatedHours}h ประมาณ</span>}
         {draft.suggestedAssignees && draft.suggestedAssignees.length > 0 && (
-          <span>Skills: {draft.suggestedAssignees.join(', ')}</span>
+          <span>ทักษะ: {draft.suggestedAssignees.join(', ')}</span>
         )}
-        {!draft.assetId && <span className="text-amber-600">⚠ No asset selected</span>}
+        {!draft.assetId && <span className="text-amber-600">⚠ ยังไม่เลือกสินทรัพย์</span>}
       </div>
     </div>
   )
@@ -769,7 +767,7 @@ function AssetContextSelector({
         <span className={selectedAsset ? 'font-medium text-foreground' : 'text-muted-foreground'}>
           {selectedAsset
             ? `${selectedAsset.assetNumber} — ${selectedAsset.name}`
-            : 'None (optional)'}
+            : 'ไม่ระบุ (ไม่บังคับ)'}
         </span>
         <div className="flex items-center gap-1 ml-1">
           {selectedAsset && (
@@ -803,7 +801,7 @@ function AssetContextSelector({
             <input
               autoFocus
               type="text"
-              placeholder="Search assets…"
+              placeholder="ค้นหาสินทรัพย์…"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full rounded-sm border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
@@ -830,10 +828,10 @@ function AssetContextSelector({
                 </button>
               ))
             ) : search.length >= 2 ? (
-              <p className="px-3 py-3 text-xs text-muted-foreground">No assets found.</p>
+              <p className="px-3 py-3 text-xs text-muted-foreground">ไม่พบสินทรัพย์</p>
             ) : (
               <p className="px-3 py-3 text-xs text-muted-foreground">
-                Type 2+ characters to search.
+                พิมพ์ 2 ตัวอักษรขึ้นไปเพื่อค้นหา
               </p>
             )}
           </div>

@@ -22,7 +22,7 @@ function initials(name: string): string {
 
 export function AssigneeAvatars({ assignees, max = 3, size = 'sm' }: AssigneeAvatarsProps) {
   if (assignees.length === 0) {
-    return <span className="text-xs text-muted-foreground">Unassigned</span>
+    return <span className="text-xs text-muted-foreground">ยังไม่มอบหมาย</span>
   }
 
   const visible = assignees.slice(0, max)
