@@ -83,7 +83,7 @@ export function EditWorkOrderClient({ id }: { id: string }) {
     const changes: Array<{ field: string; from: string; to: string }> = []
 
     if (watched.title !== undefined && watched.title !== wo.title) {
-      changes.push({ field: 'ชื่องาน', from: wo.title, to: watched.title })
+      changes.push({ field: 'หัวข้อ', from: wo.title, to: watched.title })
     }
     if (watched.description !== undefined && watched.description !== (wo.description ?? '')) {
       changes.push({
@@ -132,13 +132,13 @@ export function EditWorkOrderClient({ id }: { id: string }) {
   function onSubmit(values: EditFormValues) {
     const payload = buildPayload(values)
     if (Object.keys(payload).length === 0) {
-      toast.info('ไม่มีการเปลี่ยนแปลงที่จะบันทึก')
+      toast.info('ไม่มีการเปลี่ยนแปลงที่ต้องบันทึก')
       return
     }
 
     updateMutation.mutate(payload, {
       onSuccess: () => {
-        toast.success('อัปเดตใบสั่งงานแล้ว')
+        toast.success('อัปเดตใบสั่งงานสำเร็จ')
         router.push(`/work-orders/${id}`)
       },
     })
@@ -188,14 +188,14 @@ export function EditWorkOrderClient({ id }: { id: string }) {
           {/* Role restriction notice */}
           {isTechnician && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <strong>บทบาทช่างเทคนิค</strong> — คุณสามารถแก้ไขได้เฉพาะช่องรายละเอียดเท่านั้น
+              <strong>สิทธิ์ช่างเทคนิค</strong> — คุณสามารถแก้ไขได้เฉพาะช่องรายละเอียด
             </div>
           )}
 
           {/* Terminal state notice */}
           {isTerminal && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-              ใบสั่งงานนี้มีสถานะ <strong>{wo.status}</strong> และไม่สามารถแก้ไขได้
+              ใบสั่งงานนี้ <strong>{wo.status}</strong> ไม่สามารถแก้ไขได้
             </div>
           )}
 
@@ -209,7 +209,7 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                 {/* Title — MANAGER/ADMIN only */}
                 {!isTechnician && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="title">ชื่องาน</Label>
+                    <Label htmlFor="title">หัวข้องาน</Label>
                     <Input id="title" {...form.register('title')} disabled={isTerminal} />
                     {form.formState.errors.title && (
                       <p className="text-xs text-destructive">
@@ -277,7 +277,7 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                     <Label htmlFor="assigneeIds">รหัสผู้รับผิดชอบ</Label>
                     <Input
                       id="assigneeIds"
-                      placeholder="cuid1, cuid2, …  (คั่นด้วยจุลภาค)"
+                      placeholder="cuid1, cuid2, … (คั่นด้วยจุลภาค)"
                       {...form.register('assigneeIds')}
                       disabled={isTerminal}
                     />
@@ -300,7 +300,7 @@ export function EditWorkOrderClient({ id }: { id: string }) {
                       บันทึกการเปลี่ยนแปลง
                     </Button>
                     <Button type="button" variant="outline" onClick={() => router.back()}>
-                      ยกเลิก
+                      ยกเลิกการเปลี่ยนแปลง
                     </Button>
                   </div>
                 )}

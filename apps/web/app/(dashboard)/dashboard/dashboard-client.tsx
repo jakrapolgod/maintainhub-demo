@@ -41,16 +41,14 @@ export function DashboardClient() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Wrench className="h-4 w-4 text-muted-foreground" />
-                Work Orders
+                ใบสั่งงาน
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground mb-3">
-                Manage maintenance tasks across your facility
-              </p>
+              <p className="text-xs text-muted-foreground mb-3">จัดการงานซ่อมบำรุงทั่วทั้งโรงงาน</p>
               <Button asChild size="sm" variant="outline" className="w-full">
                 <Link href="/work-orders">
-                  Open Work Orders <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                  เปิดรายการใบสั่งงาน <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </CardContent>
@@ -60,16 +58,14 @@ export function DashboardClient() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Package2 className="h-4 w-4 text-muted-foreground" />
-                Assets
+                สินทรัพย์
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground mb-3">
-                View and manage your physical asset registry
-              </p>
+              <p className="text-xs text-muted-foreground mb-3">ดูและจัดการทะเบียนสินทรัพย์</p>
               <Button asChild size="sm" variant="outline" className="w-full">
                 <Link href="/assets">
-                  Open Assets <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                  เปิดรายการสินทรัพย์ <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </CardContent>
@@ -79,16 +75,16 @@ export function DashboardClient() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                PM Schedules
+                แผนบำรุงรักษา
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-3">
-                Plan and track preventive maintenance
+                วางแผนและติดตามการบำรุงรักษาเชิงป้องกัน
               </p>
               <Button asChild size="sm" variant="outline" className="w-full">
                 <Link href="/pm-schedules">
-                  Open PM Schedules <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                  เปิดแผนบำรุงรักษา <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>
               </Button>
             </CardContent>

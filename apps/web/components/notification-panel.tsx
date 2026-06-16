@@ -8,13 +8,16 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { mockNotifications, type Notification, type NotificationType } from '@/lib/mock-notifications'
+import {
+  mockNotifications,
+  type Notification,
+  type NotificationType,
+} from '@/lib/mock-notifications'
 
 // ─── Icon per type ────────────────────────────────────────────────────────────
 
 function NotifIcon({ type }: { type: NotificationType }) {
-  if (type === 'LOW_STOCK')
-    return <Package className="size-4 shrink-0 text-amber-500" />
+  if (type === 'LOW_STOCK') return <Package className="size-4 shrink-0 text-amber-500" />
   if (type === 'WO_ASSIGNED' || type === 'PM_DUE')
     return <Bell className="size-4 shrink-0 text-blue-500" />
   return <AlertTriangle className="size-4 shrink-0 text-destructive" />
@@ -25,11 +28,11 @@ function NotifIcon({ type }: { type: NotificationType }) {
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
+  if (mins < 1) return 'เพิ่งกี้'
+  if (mins < 60) return `${mins} น. ที่แล้ว`
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  return `${Math.floor(hrs / 24)}d ago`
+  if (hrs < 24) return `${hrs} ชม. ที่แล้ว`
+  return `${Math.floor(hrs / 24)} วันที่แล้ว`
 }
 
 // ─── Notification Panel (sheet) ───────────────────────────────────────────────
@@ -62,7 +65,7 @@ function NotificationPanel({
         {/* Header */}
         <SheetHeader className="flex flex-row items-center justify-between border-b px-4 py-3 space-y-0">
           <SheetTitle className="text-base">
-            Notifications
+            การแจ้งเตือน
             {unreadCount > 0 && (
               <span className="ml-2 inline-flex size-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
                 {unreadCount}
@@ -77,7 +80,7 @@ function NotificationPanel({
               onClick={onMarkAllRead}
             >
               <CheckCheck className="size-3.5" />
-              Mark all read
+              อ่านทั้งหมด
             </Button>
           )}
         </SheetHeader>
@@ -87,7 +90,7 @@ function NotificationPanel({
           {notifications.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
               <CheckCheck className="size-8 opacity-40" />
-              <p className="text-sm font-medium">All caught up ✓</p>
+              <p className="text-sm font-medium">ไม่มีการแจ้งเตือนใหม่ ✓</p>
             </div>
           ) : (
             <ul className="divide-y">

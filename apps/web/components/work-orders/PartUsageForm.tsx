@@ -55,7 +55,7 @@ const schema = z.object({
     .number({ invalid_type_error: 'กรุณาระบุจำนวนเต็ม' })
     .int('ต้องเป็นจำนวนเต็ม')
     .min(1, 'ขั้นต่ำ 1')
-    .max(10_000, 'จำนวนมากเกินไป'),
+    .max(10_000, 'จำนวนสูงเกินไป'),
   unitCost: z
     .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
     .nonnegative()
@@ -146,7 +146,7 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="part-search"
-                placeholder="ค้นหาตามชื่อหรือรหัสอะไหล่…"
+                placeholder="ค้นหาด้วยชื่อหรือรหัสอะไหล่…"
                 value={search}
                 autoComplete="off"
                 className="pl-9"
@@ -216,9 +216,9 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
             >
               <Package className="h-3.5 w-3.5 shrink-0" />
               <span>
-                ในมือ: <strong>{selectedPart.quantity}</strong>
-                {selectedPart.reservedQty > 0 && ` (${selectedPart.reservedQty} จอง)`}
-                {' · '}พร้อมใช้: <strong>{available}</strong>
+                ในคลัง: <strong>{selectedPart.quantity}</strong>
+                {selectedPart.reservedQty > 0 && ` (จอง ${selectedPart.reservedQty})`}
+                {' · '}คงเหลือ: <strong>{available}</strong>
               </span>
             </div>
           )}
@@ -244,9 +244,9 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
           {/* Unit cost override */}
           <div className="space-y-1.5">
             <Label htmlFor="part-cost">
-              ราคาต่อหน่วย (฿) กำหนดเอง
+              ราคาต่อหน่วยที่กำหนดเอง (฿)
               <span className="ml-1 text-xs text-muted-foreground">
-                — เว้นว่างเพื่อใช้ราคาในคลัง {selectedPart ? `(฿${selectedPart.unitCost})` : ''}
+                — เว้นว่างเพื่อใช้ราคาในทะเบียน {selectedPart ? `(฿${selectedPart.unitCost})` : ''}
               </span>
             </Label>
             <Input
@@ -276,7 +276,7 @@ export function PartUsageForm({ workOrderId, open, onClose }: PartUsageFormProps
               className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700"
             >
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              จำนวนที่ขอ ({quantity}) เกินคงเหลือในคลัง ({available}) เซิร์ฟเวอร์จะปฏิเสธคำขอนี้
+              จำนวนที่ขอ ({quantity}) เกินกว่าสต็อกคงเหลือ ({available}) ระบบจะปฏิเสธรายการนี้
             </div>
           )}
 

@@ -113,9 +113,9 @@ export default function AnalyticsPage() {
     const mix = costs.data?.costMix
     if (!mix) return []
     return [
-      { name: 'Labor', value: mix.labor },
-      { name: 'Parts', value: mix.parts },
-      { name: 'Contractor', value: mix.contractor },
+      { name: 'แรงงาน', value: mix.labor },
+      { name: 'อะไหล่', value: mix.parts },
+      { name: 'ผู้รับเหมา', value: mix.contractor },
     ].filter((s) => s.value > 0)
   }, [costs.data])
 
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <p className="text-sm text-muted-foreground">
-          Analytics is available to Managers and Admins only.
+          การวิเคราะห์ข้อมูลสำหรับผู้จัดการและผู้ดูแลระบบเท่านั้น
         </p>
       </div>
     )
@@ -183,8 +183,8 @@ export default function AnalyticsPage() {
     <div className="flex flex-col h-full overflow-auto">
       <div className="border-b bg-background px-6 py-4 shrink-0 flex items-center justify-between print:hidden">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-sm text-muted-foreground">Reliability & cost overview</p>
+          <h1 className="text-2xl font-bold tracking-tight">วิเคราะห์ข้อมูล</h1>
+          <p className="text-sm text-muted-foreground">ภาพรวมความน่าเชื่อถือและต้นทุน</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={range} onValueChange={(v) => setRange(v as Range)}>
@@ -192,16 +192,16 @@ export default function AnalyticsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3m">Last 3 months</SelectItem>
-              <SelectItem value="6m">Last 6 months</SelectItem>
-              <SelectItem value="12m">Last 12 months</SelectItem>
+              <SelectItem value="3m">3 เดือนล่าสุด</SelectItem>
+              <SelectItem value="6m">6 เดือนล่าสุด</SelectItem>
+              <SelectItem value="12m">12 เดือนล่าสุด</SelectItem>
             </SelectContent>
           </Select>
           <Button size="sm" variant="outline" onClick={() => window.print()}>
-            Export ISO report
+            ส่งออก ISO
           </Button>
           <Button size="sm" onClick={() => setOpen(true)}>
-            Generate AI Report
+            รายงาน AI
           </Button>
         </div>
       </div>
@@ -236,28 +236,28 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               {
-                label: 'PM Compliance',
+                label: 'ความสอดคล้อง PM',
                 value:
                   compliance.data !== undefined ? `${compliance.data.overallCompliancePct}%` : null,
                 sub:
                   compliance.data !== undefined
-                    ? `${compliance.data.fullyCompliant}/${compliance.data.totalSchedules} schedules fully compliant`
+                    ? `${compliance.data.fullyCompliant}/${compliance.data.totalSchedules} แผนสอดคล้อง`
                     : '',
               },
               {
                 label: 'MTTR',
-                value: metrics.data !== undefined ? `${metrics.data.mttr ?? '—'} h` : null,
-                sub: 'mean time to repair',
+                value: metrics.data !== undefined ? `${metrics.data.mttr ?? '—'} ชม.` : null,
+                sub: 'เวลาเฉลี่ยในการซ่อม',
               },
               {
-                label: 'Overdue WOs',
+                label: 'WO เกินกำหนด',
                 value: metrics.data !== undefined ? String(metrics.data.overdueCount) : null,
-                sub: 'past SLA, not closed',
+                sub: 'เกิน SLA ยังไม่ปิด',
               },
               {
-                label: 'Total Cost',
+                label: 'ต้นทุนรวม',
                 value: costs.data !== undefined ? fmtMoney(costs.data.totalCost) : null,
-                sub: 'labor + parts + contractor',
+                sub: 'แรงงาน + อะไหล่ + ผู้รับเหมา',
               },
             ].map(({ label, value, sub }) => (
               <div key={label} className="rounded-xl border bg-card p-4">
@@ -275,7 +275,7 @@ export default function AnalyticsPage() {
 
         {/* ── Section 1: KPI Trends ── */}
         <section>
-          <h2 className="text-base font-semibold mb-4">KPI Trends</h2>
+          <h2 className="text-base font-semibold mb-4">แนวโน้ม KPI</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[
               { label: 'MTBF (hrs)', data: mtbfRows, unit: 'h' },
@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
             ))}
 
             <div className="rounded-xl border bg-card p-4 lg:col-span-2">
-              <p className="text-xs font-medium text-muted-foreground mb-2">WO Volume by Type</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">ปริมาณ WO ตามประเภท</p>
               {reliability.isPending ? (
                 <Skeleton className="h-[140px] w-full" />
               ) : volumeRows.length === 0 ? (
@@ -335,10 +335,10 @@ export default function AnalyticsPage() {
 
         {/* ── Section 2: Cost Breakdown ── */}
         <section>
-          <h2 className="text-base font-semibold mb-4">Cost Breakdown</h2>
+          <h2 className="text-base font-semibold mb-4">การแจกแจงต้นทุน</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="rounded-xl border bg-card p-4">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Cost Mix</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">สัดส่วนต้นทุน</p>
               {costs.isPending ? (
                 <Skeleton className="h-[200px] w-full" />
               ) : costPie.length === 0 ? (
@@ -368,7 +368,7 @@ export default function AnalyticsPage() {
 
             <div className="rounded-xl border bg-card p-4">
               <p className="text-xs font-medium text-muted-foreground mb-2">
-                Monthly Cost by Failure Category
+                ต้นทุนรายเดือนตามหมวดหมู่
               </p>
               {costs.isPending ? (
                 <Skeleton className="h-[200px] w-full" />
@@ -398,20 +398,20 @@ export default function AnalyticsPage() {
         {/* ── Section 3: Reliability Table ── */}
         <section>
           <h2 className="text-base font-semibold mb-4">
-            Reliability — sorted by availability (worst first)
+            ความน่าเชื่อถือ — เรียงตามความพร้อมใช้งาน (แย่สุดก่อน)
           </h2>
           <div className="overflow-x-auto rounded-xl border bg-card">
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
                   {[
-                    'Asset',
-                    'MTBF (h)',
-                    'MTTR (h)',
-                    'Availability %',
-                    'Failures',
-                    'Open WOs',
-                    'Trend',
+                    'สินทรัพย์',
+                    'MTBF (ชม.)',
+                    'MTTR (ชม.)',
+                    'ความพร้อม %',
+                    'ความเสีย',
+                    'WO เปิด',
+                    'แนวโน้ม',
                   ].map((h) => (
                     <th
                       key={h}
@@ -432,7 +432,7 @@ export default function AnalyticsPage() {
                 ) : tableRows.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                      No failures recorded in this period.
+                      ไม่มีความเสียในช่วงเวลานี้
                     </td>
                   </tr>
                 ) : (
@@ -491,7 +491,7 @@ export default function AnalyticsPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI Maintenance Report</DialogTitle>
+            <DialogTitle>รายงาน AI ซ่อมบำรุง</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -500,13 +500,13 @@ export default function AnalyticsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="week">Weekly</SelectItem>
-                  <SelectItem value="month">Monthly</SelectItem>
-                  <SelectItem value="quarter">Quarterly</SelectItem>
+                  <SelectItem value="week">รายสัปดาห์</SelectItem>
+                  <SelectItem value="month">รายเดือน</SelectItem>
+                  <SelectItem value="quarter">รายไตรมาส</SelectItem>
                 </SelectContent>
               </Select>
               <Button size="sm" onClick={generateReport} disabled={loading}>
-                {loading ? 'Generating…' : 'Generate'}
+                {loading ? 'กำลังสร้าง…' : 'สร้างรายงาน'}
               </Button>
             </div>
             {report && (
@@ -521,7 +521,7 @@ export default function AnalyticsPage() {
                   size="sm"
                   onClick={() => navigator.clipboard.writeText(report)}
                 >
-                  Copy report
+                  คัดลอกรายงาน
                 </Button>
               </>
             )}
@@ -538,7 +538,7 @@ function EmptyChart({ height = 140 }: { height?: number }) {
       className="flex items-center justify-center text-xs text-muted-foreground"
       style={{ height }}
     >
-      No data for this period.
+      ไม่มีข้อมูลสำหรับช่วงเวลานี้
     </div>
   )
 }

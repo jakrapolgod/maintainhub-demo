@@ -97,15 +97,15 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
-        placeholder="Search work orders, assets, PM schedules, parts…"
+        placeholder="ค้นหาใบสั่งงาน สินทรัพย์ แผนบำรุงรักษา อะไหล่…"
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
-        {!hasResults && <CommandEmpty>No results for &ldquo;{query}&rdquo;</CommandEmpty>}
+        {!hasResults && <CommandEmpty>ไม่พบผลลัพธ์สำหรับ &ldquo;{query}&rdquo;</CommandEmpty>}
 
         {matchWOs.length > 0 && (
-          <CommandGroup heading="Work Orders">
+          <CommandGroup heading="ใบสั่งงาน">
             {matchWOs.map((wo) => (
               <CommandItem
                 key={wo.id}
@@ -131,7 +131,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         {matchWOs.length > 0 && matchAssets.length > 0 && <CommandSeparator />}
 
         {matchAssets.length > 0 && (
-          <CommandGroup heading="Assets">
+          <CommandGroup heading="สินทรัพย์">
             {matchAssets.map((a) => (
               <CommandItem
                 key={a.id}
@@ -151,7 +151,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         {matchAssets.length > 0 && matchPMs.length > 0 && <CommandSeparator />}
 
         {matchPMs.length > 0 && (
-          <CommandGroup heading="PM Schedules">
+          <CommandGroup heading="แผนบำรุงรักษา">
             {matchPMs.map((pm) => (
               <CommandItem
                 key={pm.id}
@@ -162,7 +162,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                 <span className="truncate flex-1">{pm.title}</span>
                 {pm.isOverdue && (
                   <Badge variant="destructive" className="ml-auto shrink-0 text-[10px]">
-                    Overdue
+                    เกินกำหนด
                   </Badge>
                 )}
               </CommandItem>
@@ -173,7 +173,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         {matchPMs.length > 0 && matchParts.length > 0 && <CommandSeparator />}
 
         {matchParts.length > 0 && (
-          <CommandGroup heading="Parts">
+          <CommandGroup heading="อะไหล่">
             {matchParts.map((p) => (
               <CommandItem
                 key={p.partNumber}
@@ -232,7 +232,7 @@ export function GlobalSearchTrigger() {
           <circle cx="11" cy="11" r="8" />
           <path d="m21 21-4.3-4.3" />
         </svg>
-        <span className="flex-1 text-left">Search…</span>
+        <span className="flex-1 text-left">ค้นหา…</span>
         <kbd className="hidden sm:flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
           <span>⌘</span>K
         </kbd>

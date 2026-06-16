@@ -4,8 +4,8 @@ export default function DowntimeReportPage() {
   return (
     <MaintenanceReportPage
       reportType="DOWNTIME"
-      title="Downtime & Reliability Report"
-      description="MTBF/MTTR from completed corrective work orders, top-10 downtime assets, and root-cause breakdown."
+      title="การวิเคราะห์เวลาหยุดทำงาน"
+      description="MTBF/MTTR จากใบสั่งงานแก้ไขที่เสร็จสิ้น, สินทรัพย์หยุดทำงานสูงสุด 10 อันดับ และการวิเคราะห์สาเหตุรากเหง้า"
     />
   )
 }

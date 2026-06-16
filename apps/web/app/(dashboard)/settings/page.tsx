@@ -128,12 +128,12 @@ function ApiKeysTab() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            API keys grant programmatic access. Keep them secret.
+            API keys ให้สิทธิ์เข้าถึงแบบโปรแกรม เก็บรักษาไว้เป็นความลับ
           </p>
         </div>
         <Button size="sm" onClick={() => setGenerateOpen(true)}>
           <Key className="mr-1.5 h-3.5 w-3.5" />
-          Generate Key
+          สร้าง Key
         </Button>
       </div>
 
@@ -141,7 +141,7 @@ function ApiKeysTab() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              {['Name', 'Key prefix', 'Created', 'Last used', ''].map((h) => (
+              {['ชื่อ', 'คำนำหน้า Key', 'สร้างเมื่อ', 'ใช้ล่าสุด', ''].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-xs font-medium text-muted-foreground"
@@ -155,7 +155,7 @@ function ApiKeysTab() {
             {keys.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No API keys yet.
+                  ยังไม่มี API keys
                 </td>
               </tr>
             )}
@@ -172,7 +172,7 @@ function ApiKeysTab() {
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => setRevokeKey(k)}
                   >
-                    Revoke
+                    ยกเลิก Key
                   </Button>
                 </td>
               </tr>
@@ -190,16 +190,16 @@ function ApiKeysTab() {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Generate API Key</DialogTitle>
+            <DialogTitle>สร้าง API Key</DialogTitle>
           </DialogHeader>
 
           {!generatedKey ? (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="key-name">Key name</Label>
+                <Label htmlFor="key-name">ชื่อ Key</Label>
                 <Input
                   id="key-name"
-                  placeholder="e.g. Production Integration"
+                  placeholder="เช่น Production Integration"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   onKeyDown={(e) => {
@@ -209,10 +209,10 @@ function ApiKeysTab() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={handleCloseGenerate}>
-                  Cancel
+                  ยกเลิก
                 </Button>
                 <Button onClick={handleGenerate} disabled={!newKeyName.trim()}>
-                  Generate
+                  สร้าง
                 </Button>
               </DialogFooter>
             </div>
@@ -221,11 +221,11 @@ function ApiKeysTab() {
               <Alert className="border-amber-400 bg-amber-50 dark:bg-amber-950/20">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800 dark:text-amber-300 text-sm font-medium">
-                  Save this key now — it won&apos;t be shown again.
+                  บันทึก key นี้ไว้ทันที — จะไม่แสดงอีกครั้ง
                 </AlertDescription>
               </Alert>
               <div className="space-y-1.5">
-                <Label>Your new API key</Label>
+                <Label>API Key ใหม่ของคุณ</Label>
                 <div className="flex gap-2">
                   <Input readOnly value={generatedKey} className="font-mono text-xs" />
                   <Button
@@ -233,7 +233,7 @@ function ApiKeysTab() {
                     size="icon"
                     onClick={() => {
                       navigator.clipboard.writeText(generatedKey)
-                      toast.success('Copied to clipboard')
+                      toast.success('คัดลอกแล้ว')
                     }}
                   >
                     <Copy className="h-4 w-4" />
@@ -241,7 +241,7 @@ function ApiKeysTab() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleCloseGenerate}>Done</Button>
+                <Button onClick={handleCloseGenerate}>เสร็จสิ้น</Button>
               </DialogFooter>
             </div>
           )}
@@ -257,19 +257,19 @@ function ApiKeysTab() {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Revoke API Key</DialogTitle>
+            <DialogTitle>ยกเลิก API Key</DialogTitle>
             <DialogDescription>
-              Revoke{' '}
+              ยกเลิก{' '}
               <span className="font-medium text-foreground">&quot;{revokeKey?.name}&quot;</span>?
-              Any integrations using this key will stop working immediately.
+              ระบบที่ใช้ key นี้จะหยุดทำงานทันที
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRevokeKey(null)}>
-              Cancel
+              ยกเลิก
             </Button>
             <Button variant="destructive" onClick={handleRevoke}>
-              Revoke
+              ยกเลิก Key
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -305,17 +305,17 @@ function SsoTab() {
         <div className="flex items-center gap-3 mb-4">
           <Badge variant="secondary" className="gap-1.5">
             <Circle className="h-2 w-2 fill-amber-500 text-amber-500" />
-            Not configured
+            ยังไม่ได้ตั้งค่า
           </Badge>
           <span className="text-sm text-muted-foreground">SAML 2.0 / OIDC SSO</span>
         </div>
         <ol className="space-y-1.5 text-sm text-muted-foreground list-decimal list-inside">
-          <li>Download the MaintainHub Service Provider metadata XML</li>
-          <li>Register the SP in your Identity Provider (Okta, Azure AD, ADFS, etc.)</li>
-          <li>Paste the IdP Entity ID, SSO URL, and X.509 certificate below</li>
+          <li>ดาวน์โหลด XML metadata ของ MaintainHub Service Provider</li>
+          <li>ลงทะเบียน SP ใน Identity Provider (Okta, Azure AD, ADFS เป็นต้น)</li>
+          <li>วาง IdP Entity ID, SSO URL และ X.509 certificate ด้านล่าง</li>
           <li>
-            Click <strong className="text-foreground">Save</strong> then{' '}
-            <strong className="text-foreground">Test SSO</strong>
+            คลิก <strong className="text-foreground">บันทึก</strong> จากนั้น{' '}
+            <strong className="text-foreground">ทดสอบ SSO</strong>
           </li>
         </ol>
       </div>
@@ -353,27 +353,25 @@ function SsoTab() {
         </div>
 
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => toast.success('SSO configuration saved')}>
-            Save
+          <Button size="sm" onClick={() => toast.success('บันทึกการตั้งค่า SSO แล้ว')}>
+            บันทึก
           </Button>
-          <span title="Connect your IdP first before testing">
+          <span title="เชื่อมต่อ IdP ก่อนจึงจะทดสอบได้">
             <Button size="sm" variant="outline" disabled>
-              Test SSO
+              ทดสอบ SSO
             </Button>
           </span>
-          <p className="self-center text-xs text-muted-foreground">
-            (Save and configure your IdP first)
-          </p>
+          <p className="self-center text-xs text-muted-foreground">(บันทึกและตั้งค่า IdP ก่อน)</p>
         </div>
       </div>
 
       {/* Group mappings */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label>Group Mapping</Label>
+          <Label>การแมปกลุ่ม</Label>
           <Button size="sm" variant="outline" onClick={addRow}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add row
+            เพิ่มแถว
           </Button>
         </div>
         <div className="rounded-lg border overflow-hidden">
@@ -393,7 +391,7 @@ function SsoTab() {
               {mappings.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    No mappings. Add a row to get started.
+                    ยังไม่มีการแมป เพิ่มแถวเพื่อเริ่มต้น
                   </td>
                 </tr>
               )}
@@ -455,17 +453,17 @@ function GeneralTab() {
   return (
     <div className="max-w-md space-y-6">
       <div className="space-y-1.5">
-        <Label htmlFor="tenant-name">Tenant name</Label>
+        <Label htmlFor="tenant-name">ชื่อองค์กร</Label>
         <Input
           id="tenant-name"
           value={tenantName}
           onChange={(e) => setTenantName(e.target.value)}
         />
-        <p className="text-xs text-muted-foreground">Displayed in the top bar and on reports.</p>
+        <p className="text-xs text-muted-foreground">แสดงในแถบบนและในรายงาน</p>
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="timezone">Timezone</Label>
+        <Label htmlFor="timezone">เขตเวลา</Label>
         <Select value={timezone} onValueChange={setTimezone}>
           <SelectTrigger id="timezone">
             <SelectValue />
@@ -481,7 +479,7 @@ function GeneralTab() {
       </div>
 
       <div className="space-y-2">
-        <Label>Language</Label>
+        <Label>ภาษา</Label>
         <div className="flex flex-col gap-2">
           {(
             [
@@ -504,9 +502,45 @@ function GeneralTab() {
         </div>
       </div>
 
-      <Button onClick={handleSave}>Save Changes</Button>
+      <Button onClick={handleSave}>บันทึก</Button>
     </div>
   )
+}
+
+// ─── Users tab ────────────────────────────────────────────────────────────────
+
+function UsersTab() {
+  return <p className="text-sm text-muted-foreground">การจัดการผู้ใช้ — เร็วๆ นี้</p>
+}
+
+// ─── Billing tab ──────────────────────────────────────────────────────────────
+
+function BillingTab() {
+  return <p className="text-sm text-muted-foreground">การตั้งค่าการเรียกเก็บเงิน — เร็วๆ นี้</p>
+}
+
+// ─── ERP tab ──────────────────────────────────────────────────────────────────
+
+function ErpTab() {
+  return <p className="text-sm text-muted-foreground">การตั้งค่าการเชื่อมต่อ ERP — เร็วๆ นี้</p>
+}
+
+// ─── Contractors tab ──────────────────────────────────────────────────────────
+
+function ContractorsTab() {
+  return <p className="text-sm text-muted-foreground">การตั้งค่าผู้รับเหมา — เร็วๆ นี้</p>
+}
+
+// ─── Report Schedules tab ───────────────────────────────────────────────────────
+
+function ReportSchedulesTab() {
+  return <p className="text-sm text-muted-foreground">กำหนดการรายงาน — เร็วๆ นี้</p>
+}
+
+// ─── Webhooks tab ─────────────────────────────────────────────────────────────
+
+function WebhooksTab() {
+  return <p className="text-sm text-muted-foreground">การตั้งค่า Webhook — เร็วๆ นี้</p>
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -515,30 +549,80 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full overflow-auto">
       <div className="border-b bg-background px-6 py-4 shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your workspace configuration.</p>
+        <h1 className="text-2xl font-bold tracking-tight">ตั้งค่า</h1>
+        <p className="text-sm text-muted-foreground">จัดการการตั้งค่าพื้นที่ทำงาน</p>
       </div>
 
       <div className="flex-1 p-6">
-        <Tabs defaultValue="api-keys">
-          <TabsList className="mb-6">
-            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
-            <TabsTrigger value="sso">SSO</TabsTrigger>
-            <TabsTrigger value="general">General</TabsTrigger>
-          </TabsList>
+        <div className="w-full overflow-x-auto">
+          <Tabs defaultValue="general">
+            <TabsList className="flex flex-wrap h-auto gap-1 bg-muted p-1 rounded-lg w-full mb-6">
+              <TabsTrigger value="general" className="text-xs px-3 py-1.5">
+                ทั่วไป
+              </TabsTrigger>
+              <TabsTrigger value="users" className="text-xs px-3 py-1.5">
+                ผู้ใช้
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="text-xs px-3 py-1.5">
+                การเรียกเก็บเงิน
+              </TabsTrigger>
+              <TabsTrigger value="erp" className="text-xs px-3 py-1.5">
+                ERP
+              </TabsTrigger>
+              <TabsTrigger value="contractors" className="text-xs px-3 py-1.5">
+                ผู้รับเหมา
+              </TabsTrigger>
+              <TabsTrigger value="report-schedules" className="text-xs px-3 py-1.5">
+                กำหนดการรายงาน
+              </TabsTrigger>
+              <TabsTrigger value="api-keys" className="text-xs px-3 py-1.5">
+                API Keys
+              </TabsTrigger>
+              <TabsTrigger value="sso" className="text-xs px-3 py-1.5">
+                SSO
+              </TabsTrigger>
+              <TabsTrigger value="webhooks" className="text-xs px-3 py-1.5">
+                Webhooks
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="api-keys">
-            <ApiKeysTab />
-          </TabsContent>
+            <TabsContent value="general">
+              <GeneralTab />
+            </TabsContent>
 
-          <TabsContent value="sso">
-            <SsoTab />
-          </TabsContent>
+            <TabsContent value="users">
+              <UsersTab />
+            </TabsContent>
 
-          <TabsContent value="general">
-            <GeneralTab />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="billing">
+              <BillingTab />
+            </TabsContent>
+
+            <TabsContent value="erp">
+              <ErpTab />
+            </TabsContent>
+
+            <TabsContent value="contractors">
+              <ContractorsTab />
+            </TabsContent>
+
+            <TabsContent value="report-schedules">
+              <ReportSchedulesTab />
+            </TabsContent>
+
+            <TabsContent value="api-keys">
+              <ApiKeysTab />
+            </TabsContent>
+
+            <TabsContent value="sso">
+              <SsoTab />
+            </TabsContent>
+
+            <TabsContent value="webhooks">
+              <WebhooksTab />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   )

@@ -25,27 +25,27 @@ interface PriorityStyle {
 
 const PRIORITY_STYLES: Record<WOPriority, PriorityStyle> = {
   CRITICAL: {
-    label: 'Critical',
+    label: 'วิกฤต',
     Icon: AlertOctagon,
     classes: 'bg-red-50    text-red-700    border-red-200    dark:bg-red-950    dark:text-red-300',
     iconCls: 'text-red-600    dark:text-red-400',
   },
   HIGH: {
-    label: 'High',
+    label: 'สูง',
     Icon: ArrowUpCircle,
     classes:
       'bg-orange-50  text-orange-700  border-orange-200  dark:bg-orange-950  dark:text-orange-300',
     iconCls: 'text-orange-600  dark:text-orange-400',
   },
   MEDIUM: {
-    label: 'Medium',
+    label: 'ปานกลาง',
     Icon: MinusCircle,
     classes:
       'bg-blue-50    text-blue-700    border-blue-200    dark:bg-blue-950    dark:text-blue-300',
     iconCls: 'text-blue-600    dark:text-blue-400',
   },
   LOW: {
-    label: 'Low',
+    label: 'ต่ำ',
     Icon: ArrowDownCircle,
     classes:
       'bg-slate-50   text-slate-600   border-slate-200   dark:bg-slate-800   dark:text-slate-300',

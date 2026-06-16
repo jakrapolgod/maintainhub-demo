@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
+
 import {
   Plus,
   Download,
@@ -141,7 +141,7 @@ export function AssetListClient() {
       >
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Asset Tree
+            ต้นไม้สินทรัพย์
           </span>
           {treeSelectedId && (
             <button
@@ -152,7 +152,7 @@ export function AssetListClient() {
               }}
               className="text-xs text-primary hover:underline"
             >
-              Clear filter
+              ล้างตัวกรอง
             </button>
           )}
         </div>
@@ -185,7 +185,7 @@ export function AssetListClient() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search assets…"
+                placeholder="ค้นหาสินทรัพย์…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -198,11 +198,11 @@ export function AssetListClient() {
             <div className="flex items-center gap-2 ml-auto">
               <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className="h-4 w-4 mr-1" />
-                Export
+                ส่งออก
               </Button>
               <Button variant="outline" size="sm" onClick={handleImport}>
                 <Upload className="h-4 w-4 mr-1" />
-                Import
+                นำเข้า
               </Button>
               <Button
                 onClick={() => {
@@ -211,7 +211,7 @@ export function AssetListClient() {
                 }}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                New Asset
+                สินทรัพย์ใหม่
               </Button>
             </div>
           </div>
@@ -231,11 +231,11 @@ export function AssetListClient() {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="OPERATIONAL">Operational</SelectItem>
-                <SelectItem value="STANDBY">Standby</SelectItem>
-                <SelectItem value="UNDER_MAINTENANCE">Under Maintenance</SelectItem>
-                <SelectItem value="DECOMMISSIONED">Decommissioned</SelectItem>
+                <SelectItem value="all">ทุกสถานะ</SelectItem>
+                <SelectItem value="OPERATIONAL">ใช้งานปกติ</SelectItem>
+                <SelectItem value="STANDBY">สำรอง</SelectItem>
+                <SelectItem value="UNDER_MAINTENANCE">กำลังซ่อมบำรุง</SelectItem>
+                <SelectItem value="DECOMMISSIONED">ปลดระวาง</SelectItem>
               </SelectContent>
             </Select>
 
@@ -250,11 +250,11 @@ export function AssetListClient() {
                 <SelectValue placeholder="Criticality" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All criticality</SelectItem>
-                <SelectItem value="A">A — Critical</SelectItem>
-                <SelectItem value="B">B — High</SelectItem>
-                <SelectItem value="C">C — Moderate</SelectItem>
-                <SelectItem value="D">D — Low</SelectItem>
+                <SelectItem value="all">ทุกความสำคัญ</SelectItem>
+                <SelectItem value="A">A — สำคัญยิ่ง</SelectItem>
+                <SelectItem value="B">B — สูง</SelectItem>
+                <SelectItem value="C">C — ปานกลาง</SelectItem>
+                <SelectItem value="D">D — ต่ำ</SelectItem>
               </SelectContent>
             </Select>
 
@@ -269,7 +269,7 @@ export function AssetListClient() {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
@@ -295,7 +295,7 @@ export function AssetListClient() {
               </Button>
             )}
 
-            <span className="ml-auto text-xs text-muted-foreground">{total} assets</span>
+            <span className="ml-auto text-xs text-muted-foreground">{total} รายการ</span>
           </div>
         </div>
 
@@ -309,10 +309,10 @@ export function AssetListClient() {
             </div>
           ) : error ? (
             <div className="flex flex-col items-center gap-3 p-12 text-muted-foreground">
-              <p>Failed to load assets</p>
+              <p>โหลดข้อมูลสินทรัพย์ไม่สำเร็จ</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-1" />
-                Retry
+                ลองใหม่
               </Button>
             </div>
           ) : (
@@ -320,14 +320,14 @@ export function AssetListClient() {
               <thead className="border-b bg-muted/50 sticky top-0">
                 <tr>
                   {[
-                    'Asset #',
-                    'Name',
-                    'Category',
-                    'Location',
-                    'Criticality',
-                    'Status',
+                    'รหัส',
+                    'ชื่อ',
+                    'หมวดหมู่',
+                    'ตำแหน่ง',
+                    'ความสำคัญ',
+                    'สถานะ',
                     'MTBF',
-                    'Open WOs',
+                    'WO เปิด',
                     '',
                   ].map((h) => (
                     <th
@@ -346,7 +346,7 @@ export function AssetListClient() {
                 {items.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-12 text-center text-muted-foreground text-sm">
-                      No assets match your filters.
+                      ไม่พบสินทรัพย์ที่ตรงกับตัวกรอง
                     </td>
                   </tr>
                 )}
@@ -359,7 +359,7 @@ export function AssetListClient() {
         {totalPages > 1 && (
           <div className="border-t px-4 py-3 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
-              Page {page} of {totalPages}
+              หน้า {page} จาก {totalPages}
             </span>
             <div className="flex gap-2">
               <Button
@@ -387,7 +387,7 @@ export function AssetListClient() {
       <Sheet open={newAssetOpen} onOpenChange={setNewAssetOpen}>
         <SheetContent className="w-full max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>New Asset</SheetTitle>
+            <SheetTitle>สินทรัพย์ใหม่</SheetTitle>
           </SheetHeader>
           <div className="mt-4">
             <AssetForm
@@ -458,7 +458,7 @@ function AssetRow({ asset }: { asset: AssetCard }) {
           className="text-xs text-primary hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          View
+          ดู
         </Link>
       </td>
     </tr>

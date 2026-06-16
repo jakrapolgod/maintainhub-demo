@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
-import { Skeleton }   from '@/components/ui/skeleton'
+import { Skeleton } from '@/components/ui/skeleton'
 import { AssetListClient } from './asset-list-client'
 
 export const metadata: Metadata = { title: 'Assets' }
@@ -9,9 +9,9 @@ export default function AssetsPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b bg-background px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Assets</h1>
+        <h1 className="text-2xl font-bold tracking-tight">สินทรัพย์</h1>
         <p className="text-sm text-muted-foreground">
-          Track and manage your physical and virtual facility assets.
+          ติดตามและจัดการสินทรัพย์ทางกายภาพและเสมือนในโรงงาน
         </p>
       </div>
       <Suspense fallback={<PageSkeleton />}>

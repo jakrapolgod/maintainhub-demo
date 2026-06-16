@@ -41,7 +41,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
     {
       role: 'assistant',
       content:
-        'อธิบายปัญหาการซ่อมบำรุง แล้วฉันจะสร้างใบสั่งงานให้คุณ รวมถึงชื่อสินทรัพย์ อาการผิดปกติ และความเร่งด่วน',
+        'อธิบายปัญหาการซ่อมบำรุง แล้วฉันจะสร้างใบสั่งงานให้คุณ โปรดระบุชื่อสินทรัพย์ อาการ และความเร่งด่วน',
     },
   ])
   const [draft, setDraft] = useState<WorkOrderDraft | null>(null)
@@ -80,7 +80,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
             ...prev,
             {
               role: 'assistant',
-              content: `สร้างร่างใบสั่งงานแล้ว ตรวจสอบด้านล่างและยืนยัน แก้ไข หรือยกเลิก`,
+              content: `ฉันสร้างร่างใบสั่งงานแล้ว ตรวจสอบด้านล่างและยืนยัน แก้ไข หรือยกเลิก`,
             },
           ])
         },
@@ -109,7 +109,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
       },
       {
         onSuccess: (result) => {
-          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว!`)
+          toast.success(`สร้างใบสั่งงาน ${result.woNumber} สำเร็จ!`)
           onClose()
           router.push(`/work-orders/${result.id}`)
         },
@@ -152,7 +152,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
           <div className="flex items-center gap-2">
             {(messages.length > 1 || draft) && (
               <Button variant="ghost" size="sm" onClick={handleReset} className="text-xs h-7">
-                เริ่มใหม่
+                แชทใหม่
               </Button>
             )}
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
@@ -247,7 +247,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
 
                 {!draft.assetId && (
                   <p className="text-xs text-amber-600">
-                    ยังไม่เลือกสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อนยืนยัน
+                    ไม่มีรหัสสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อนยืนยัน
                   </p>
                 )}
               </CardContent>
@@ -261,7 +261,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
         <div className="border-t px-4 py-3">
           <div className="flex gap-2">
             <Input
-              placeholder="อธิบายปัญหาการซ่อมบำรุง…"
+              placeholder="อธิบายปัญหาที่พบ…"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -286,7 +286,7 @@ export function AIDraftDrawer({ open, onClose }: AIDraftDrawerProps) {
             </Button>
           </div>
           <p className="mt-1.5 text-[11px] text-muted-foreground text-center">
-            ขับเคลื่อนโดย Claude · ผลลัพธ์เป็นข้อเสนอแนะ — กรุณาตรวจสอบก่อนบันทึก
+            ขับเคลื่อนโดย Claude · ผลลัพธ์เป็นข้อเสนอแนะ — ตรวจสอบก่อนบันทึกเสมอ
           </p>
         </div>
       </aside>

@@ -83,13 +83,6 @@ const STATUS_LABELS: Record<WOStatus, string> = {
   CANCELLED: 'ยกเลิก',
 }
 
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: 'วิกฤต',
-  HIGH: 'สูง',
-  MEDIUM: 'ปานกลาง',
-  LOW: 'ต่ำ',
-}
-
 type View = 'table' | 'kanban' | 'calendar'
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -158,7 +151,7 @@ export function WorkOrderListClient() {
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => setView(v)}
-                title={v === 'table' ? 'ตาราง' : v === 'kanban' ? 'คัมบัง' : 'ปฏิทิน'}
+                title={v.charAt(0).toUpperCase() + v.slice(1)}
               >
                 <Icon className="h-4 w-4" />
               </Button>
@@ -167,7 +160,7 @@ export function WorkOrderListClient() {
 
           <Button onClick={() => setAiDrawerOpen(true)} className="gap-2">
             <Sparkles className="h-4 w-4" />
-            ใบสั่งงานใหม่
+            สร้างใบสั่งงาน
           </Button>
         </div>
 
@@ -184,7 +177,7 @@ export function WorkOrderListClient() {
                   : 'border-border hover:bg-accent'
               }`}
             >
-              {STATUS_LABELS[s] ?? s}
+              {STATUS_LABELS[s]}
             </button>
           ))}
 
@@ -195,14 +188,21 @@ export function WorkOrderListClient() {
               value={priorityFilter}
               onValueChange={(v) => setPriorityFilter(v as WOPriority | 'all')}
             >
-              <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectTrigger className="h-8 w-36 text-xs">
                 <SelectValue placeholder="ความเร่งด่วน" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">ทุกระดับ</SelectItem>
-                {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as WOPriority[]).map((p) => (
+                <SelectItem value="all">ทุกความเร่งด่วน</SelectItem>
+                {(
+                  [
+                    ['CRITICAL', 'วิกฤต'],
+                    ['HIGH', 'สูง'],
+                    ['MEDIUM', 'ปานกลาง'],
+                    ['LOW', 'ต่ำ'],
+                  ] as [WOPriority, string][]
+                ).map(([p, label]) => (
                   <SelectItem key={p} value={p}>
-                    {PRIORITY_LABELS[p] ?? p}
+                    {label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -213,7 +213,7 @@ export function WorkOrderListClient() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="h-8 w-36 text-xs"
-              title="วันเริ่มต้น"
+              title="วันที่เริ่มต้น"
             />
             <span className="text-muted-foreground text-xs">–</span>
             <Input
@@ -221,7 +221,7 @@ export function WorkOrderListClient() {
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="h-8 w-36 text-xs"
-              title="วันสิ้นสุด"
+              title="วันที่สิ้นสุด"
             />
 
             {(statusFilter.length > 0 || priorityFilter !== 'all' || dateFrom || dateTo) && (
@@ -236,7 +236,7 @@ export function WorkOrderListClient() {
                   setDateTo('')
                 }}
               >
-                ล้างตัวกรอง
+                ล้างค่า
               </Button>
             )}
           </div>
@@ -296,15 +296,15 @@ function TableView({
 
   return (
     <div className="p-6">
-      <p className="mb-3 text-xs text-muted-foreground">ทั้งหมด {total} ใบสั่งงาน</p>
+      <p className="mb-3 text-xs text-muted-foreground">{total} ใบสั่งงาน</p>
 
       <div className="overflow-x-auto rounded-lg border bg-card">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50">
             <tr>
               {[
-                'เลขที่',
-                'ชื่องาน',
+                'เลขที่ WO',
+                'หัวข้อ',
                 'สินทรัพย์',
                 'ความเร่งด่วน',
                 'สถานะ',
@@ -328,7 +328,7 @@ function TableView({
             {items.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-muted-foreground text-sm">
-                  ไม่พบใบสั่งงานที่ตรงกับตัวกรอง
+                  ไม่มีใบสั่งงานที่ตรงกับตัวกรอง
                 </td>
               </tr>
             )}
@@ -427,15 +427,6 @@ function KanbanView({
     {} as Record<WOStatus, WorkOrderSummary[]>,
   )
 
-  const COLUMN_LABELS: Record<WOStatus, string> = {
-    DRAFT: 'Draft',
-    OPEN: 'Open',
-    IN_PROGRESS: 'In Progress',
-    ON_HOLD: 'On Hold',
-    COMPLETED: 'Completed',
-    CANCELLED: 'Cancelled',
-  }
-
   return (
     <div className="flex gap-4 p-6 overflow-x-auto h-full">
       {KANBAN_STATUSES.map((status) => {
@@ -453,7 +444,7 @@ function KanbanView({
                 <KanbanCard key={wo.id} wo={wo} onClick={() => onOpen(wo.id)} />
               ))}
               {col.length === 0 && (
-                <div className="py-8 text-center text-xs text-muted-foreground">ยังไม่มีรายการ</div>
+                <div className="py-8 text-center text-xs text-muted-foreground">ไม่มีรายการ</div>
               )}
             </div>
           </div>

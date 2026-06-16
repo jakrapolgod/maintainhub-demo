@@ -51,7 +51,7 @@ function ComplianceDonut({ pct }: { pct: number }) {
         <span className="text-xl font-bold" style={{ color }}>
           {pct}%
         </span>
-        <span className="text-[10px] text-muted-foreground">compliant</span>
+        <span className="text-[10px] text-muted-foreground">ปฏิบัติตาม</span>
       </div>
     </div>
   )
@@ -81,7 +81,7 @@ export function PMComplianceWidget({ className }: PMComplianceWidgetProps) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
-          PM Compliance
+          ความสอดคล้อง PM
         </CardTitle>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => void refetch()}>
@@ -110,17 +110,17 @@ export function PMComplianceWidget({ className }: PMComplianceWidgetProps) {
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
-                  <span className="text-muted-foreground">Compliant</span>
+                  <span className="text-muted-foreground">สอดคล้อง</span>
                   <span className="font-medium ml-auto">{compData?.fullyCompliant ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-200 shrink-0" />
-                  <span className="text-muted-foreground">Total schedules</span>
+                  <span className="text-muted-foreground">แผนทั้งหมด</span>
                   <span className="font-medium ml-auto">{compData?.totalSchedules ?? 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-400 shrink-0" />
-                  <span className="text-muted-foreground">Overdue</span>
+                  <span className="text-muted-foreground">เกินกำหนด</span>
                   <span className="font-medium ml-auto">{overdueItems.length}</span>
                 </div>
               </div>
@@ -130,7 +130,7 @@ export function PMComplianceWidget({ className }: PMComplianceWidgetProps) {
             {overdueItems.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  Most overdue
+                  เกินกำหนดมากสุด
                 </p>
                 <ul className="space-y-1.5">
                   {overdueItems.map((s) => {
@@ -148,7 +148,7 @@ export function PMComplianceWidget({ className }: PMComplianceWidgetProps) {
                             <p className="text-xs text-muted-foreground truncate">{s.assetName}</p>
                           </div>
                           <Badge variant="destructive" className="shrink-0 text-[10px] py-0 px-1.5">
-                            {daysOverdue}d overdue
+                            เกิน {daysOverdue} วัน
                           </Badge>
                         </Link>
                       </li>
@@ -161,7 +161,7 @@ export function PMComplianceWidget({ className }: PMComplianceWidgetProps) {
             {overdueItems.length === 0 && (
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <ClipboardCheck className="h-4 w-4" />
-                All active schedules are on track
+                แผนทั้งหมดเป็นปัจจุบัน
               </div>
             )}
           </div>

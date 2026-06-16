@@ -6,22 +6,22 @@ import type { AssetStatus, Criticality } from '@/lib/api/assets'
 
 const CRITICALITY_CONFIG: Record<Criticality, { label: string; color: string; dot: string }> = {
   A: {
-    label: 'Mission-critical',
+    label: 'สำคัญยิ่ง',
     color: 'bg-red-100 text-red-700 border-red-200',
     dot: 'bg-red-500',
   },
   B: {
-    label: 'High-impact',
+    label: 'ผลกระทบสูง',
     color: 'bg-orange-100 text-orange-700 border-orange-200',
     dot: 'bg-orange-500',
   },
   C: {
-    label: 'Moderate',
+    label: 'ปานกลาง',
     color: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     dot: 'bg-yellow-500',
   },
   D: {
-    label: 'Low-impact',
+    label: 'ผลกระทบต่ำ',
     color: 'bg-green-100 text-green-700 border-green-200',
     dot: 'bg-green-500',
   },
@@ -58,15 +58,15 @@ export function CriticalityBadge({ criticality, dotOnly, className }: Criticalit
 
 const STATUS_CONFIG: Record<AssetStatus, { label: string; color: string }> = {
   OPERATIONAL: {
-    label: 'Operational',
+    label: 'ใช้งานปกติ',
     color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   },
-  STANDBY: { label: 'Standby', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  STANDBY: { label: 'สำรอง', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   UNDER_MAINTENANCE: {
-    label: 'Under Maintenance',
+    label: 'กำลังซ่อมบำรุง',
     color: 'bg-amber-100 text-amber-700 border-amber-200',
   },
-  DECOMMISSIONED: { label: 'Decommissioned', color: 'bg-zinc-100 text-zinc-500 border-zinc-200' },
+  DECOMMISSIONED: { label: 'ปลดระวาง', color: 'bg-zinc-100 text-zinc-500 border-zinc-200' },
 }
 
 interface AssetStatusBadgeProps {

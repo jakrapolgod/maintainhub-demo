@@ -96,7 +96,7 @@ function eventUrgencyClass(entry: PMCalendarEntry): string {
 }
 
 function typeLabel(type: string): string {
-  return { CALENDAR: 'Calendar', METER: 'Meter', CONDITION: 'Condition' }[type] ?? type
+  return { CALENDAR: 'ปฏิทิน', METER: 'มิเตอร์', CONDITION: 'เงื่อนไข' }[type] ?? type
 }
 
 function typeBadgeVariant(type: string): 'info' | 'warning' | 'secondary' {
@@ -187,8 +187,8 @@ export function PMSchedulesClient() {
       <div className="border-b bg-background px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">PM Schedules</h1>
-            <p className="text-sm text-muted-foreground">Preventive maintenance program</p>
+            <h1 className="text-2xl font-bold tracking-tight">แผนบำรุงรักษา</h1>
+            <p className="text-sm text-muted-foreground">โปรแกรมการบำรุงรักษาเชิงป้องกัน</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
@@ -196,7 +196,7 @@ export function PMSchedulesClient() {
             </Button>
             <Button asChild size="sm">
               <Link href="/pm-schedules/new">
-                <Plus className="h-4 w-4 mr-1" /> New Schedule
+                <Plus className="h-4 w-4 mr-1" /> แผนใหม่
               </Link>
             </Button>
           </div>
@@ -208,13 +208,13 @@ export function PMSchedulesClient() {
         <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
           <TabsList>
             <TabsTrigger value="list">
-              <LayoutList className="h-4 w-4 mr-1.5" /> List
+              <LayoutList className="h-4 w-4 mr-1.5" /> รายการ
             </TabsTrigger>
             <TabsTrigger value="calendar">
-              <CalendarDays className="h-4 w-4 mr-1.5" /> Calendar
+              <CalendarDays className="h-4 w-4 mr-1.5" /> ปฏิทิน
             </TabsTrigger>
             <TabsTrigger value="compliance">
-              <BarChart3 className="h-4 w-4 mr-1.5" /> Compliance
+              <BarChart3 className="h-4 w-4 mr-1.5" /> ความสอดคล้อง
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -228,9 +228,9 @@ export function PMSchedulesClient() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All schedules</SelectItem>
-              <SelectItem value="active">Active only</SelectItem>
-              <SelectItem value="inactive">Inactive only</SelectItem>
+              <SelectItem value="all">ทุกแผน</SelectItem>
+              <SelectItem value="active">ใช้งานเท่านั้น</SelectItem>
+              <SelectItem value="inactive">ไม่ใช้งานเท่านั้น</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -255,28 +255,26 @@ export function PMSchedulesClient() {
                   <thead>
                     <tr className="border-b bg-muted/40">
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Title
+                        หัวข้อ
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Asset
+                        สินทรัพย์
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Type
+                        ประเภท
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Next Due
+                        ครบกำหนดถัดไป
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Last Triggered
+                        เรียกใช้ล่าสุด
                       </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">งาน</th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Tasks
-                      </th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                        Active
+                        ใช้งาน
                       </th>
                       <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                        Actions
+                        การดำเนินการ
                       </th>
                     </tr>
                   </thead>
@@ -310,7 +308,7 @@ export function PMSchedulesClient() {
                           )}
                           {s.isOverdue && (
                             <Badge variant="destructive" className="ml-2 py-0 px-1.5 text-[10px]">
-                              Overdue
+                              เกินกำหนด
                             </Badge>
                           )}
                         </td>
@@ -325,7 +323,7 @@ export function PMSchedulesClient() {
                             checked={s.isActive}
                             onCheckedChange={() => handleToggleActive(s)}
                             disabled={activateMut.isPending || deactivateMut.isPending}
-                            aria-label={s.isActive ? 'Deactivate' : 'Activate'}
+                            aria-label={s.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                           />
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -370,7 +368,7 @@ export function PMSchedulesClient() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setCalendarMonth(new Date())}>
-                  Today
+                  วันนี้
                 </Button>
                 <Button
                   variant="outline"
@@ -417,7 +415,7 @@ export function PMSchedulesClient() {
                       >
                         {complianceData?.overallCompliancePct ?? 0}%
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">Overall compliance</div>
+                      <div className="text-sm text-muted-foreground mt-1">ความสอดคล้องรวม</div>
                     </CardContent>
                   </Card>
                   <Card>
@@ -425,7 +423,7 @@ export function PMSchedulesClient() {
                       <div className="text-3xl font-bold text-green-600">
                         {complianceData?.fullyCompliant ?? 0}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">Fully compliant</div>
+                      <div className="text-sm text-muted-foreground mt-1">สอดคล้องครบถ้วน</div>
                     </CardContent>
                   </Card>
                   <Card>
@@ -433,7 +431,7 @@ export function PMSchedulesClient() {
                       <div className="text-3xl font-bold">
                         {complianceData?.totalSchedules ?? 0}
                       </div>
-                      <div className="text-sm text-muted-foreground mt-1">Total schedules</div>
+                      <div className="text-sm text-muted-foreground mt-1">แผนทั้งหมด</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -444,22 +442,22 @@ export function PMSchedulesClient() {
                     <thead>
                       <tr className="border-b bg-muted/40">
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Schedule
+                          แผน
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Asset
+                          สินทรัพย์
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Type
+                          ประเภท
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Planned
+                          วางแผน
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                          Actual
+                          จริง
                         </th>
                         <th className="px-4 py-3 text-left font-medium text-muted-foreground min-w-40">
-                          Compliance
+                          ความสอดคล้อง
                         </th>
                       </tr>
                     </thead>
@@ -512,22 +510,22 @@ export function PMSchedulesClient() {
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Estimated</p>
-                  <p className="font-medium">{selectedEntry.estimatedHours}h</p>
+                  <p className="text-muted-foreground">เวลาประมาณ</p>
+                  <p className="font-medium">{selectedEntry.estimatedHours} ชม.</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Status</p>
+                  <p className="text-muted-foreground">สถานะ</p>
                   <p
                     className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-green-600'}`}
                   >
-                    {selectedEntry.isOverdue ? 'Overdue' : 'On schedule'}
+                    {selectedEntry.isOverdue ? 'เกินกำหนด' : 'ตามกำหนด'}
                   </p>
                 </div>
               </div>
 
               {selectedEntry.assignees.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Assigned to</p>
+                  <p className="text-sm text-muted-foreground mb-1">มอบหมายให้</p>
                   <div className="flex flex-wrap gap-1">
                     {selectedEntry.assignees.map((a) => (
                       <Badge key={a.id} variant="secondary">
@@ -548,14 +546,14 @@ export function PMSchedulesClient() {
                 ) : (
                   <Zap className="h-4 w-4 mr-2" />
                 )}
-                Trigger Now
+                เรียกใช้ตอนนี้
               </Button>
               <Button variant="outline" className="w-full" asChild>
                 <Link
                   href={`/pm-schedules/${selectedEntry.scheduleId}/edit`}
                   onClick={() => setSheetOpen(false)}
                 >
-                  Edit Schedule
+                  แก้ไขแผน
                 </Link>
               </Button>
             </div>
@@ -584,7 +582,7 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
 
   const entryByDate = new Map(days.map((d) => [d.date, d.entries]))
 
-  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
@@ -643,7 +641,7 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
                 ))}
                 {entries.length > 3 && (
                   <p className="text-[10px] text-muted-foreground pl-1">
-                    +{entries.length - 3} more
+                    +{entries.length - 3} เพิ่มเติม
                   </p>
                 )}
               </div>
@@ -663,12 +661,12 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       <div className="rounded-full bg-muted p-4 mb-4">
         <CalendarDays className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold mb-2">No PM schedules yet</h3>
+      <h3 className="text-lg font-semibold mb-2">ยังไม่มีแผนบำรุงรักษา</h3>
       <p className="text-muted-foreground text-sm mb-6 max-w-xs">
-        Create your first preventive maintenance schedule to start tracking equipment health.
+        สร้างแผนบำรุงรักษาเชิงป้องกันแรกของคุณเพื่อเริ่มติดตามสุขภาพอุปกรณ์
       </p>
       <Button onClick={onNew}>
-        <Plus className="h-4 w-4 mr-1" /> Create Schedule
+        <Plus className="h-4 w-4 mr-1" /> สร้างแผน
       </Button>
     </div>
   )

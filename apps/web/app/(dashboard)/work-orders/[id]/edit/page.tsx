@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { EditWorkOrderClient } from './edit-work-order-client'
 import { Skeleton } from '@/components/ui/skeleton'
 
-export const metadata: Metadata = { title: 'Edit Work Order' }
+export const metadata: Metadata = { title: 'แก้ไขใบสั่งงาน' }
 
 export default async function EditWorkOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

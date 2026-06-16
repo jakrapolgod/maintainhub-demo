@@ -40,7 +40,7 @@ const schema = z.object({
     .string()
     .min(1, 'กรุณาระบุวันที่')
     .refine((d) => d <= format(new Date(), 'yyyy-MM-dd'), {
-      message: 'วันที่ไม่สามารถเป็นอนาคตได้',
+      message: 'ไม่สามารถเลือกวันที่ในอนาคตได้',
     }),
   hours: z
     .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
@@ -49,7 +49,7 @@ const schema = z.object({
     .multipleOf(0.5, 'ต้องเป็นทวีคูณของ 30 นาที (0.5, 1.0, 1.5, …)'),
   rate: z
     .number({ invalid_type_error: 'กรุณาระบุตัวเลข' })
-    .positive('อัตราต้องมากกว่าศูนย์')
+    .positive('อัตราต้องเป็นค่าบวก')
     .max(999_999, 'อัตราสูงเกินไป'),
   description: z.string().max(500).optional(),
 })
@@ -115,7 +115,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
         <DialogHeader>
           <DialogTitle>บันทึกรายการแรงงาน</DialogTitle>
           <DialogDescription>
-            บันทึกชั่วโมงทำงาน รายการจะแสดงให้ผู้จัดการเห็นในแท็บแรงงานและต้นทุน
+            บันทึกชั่วโมงการทำงาน ผู้จัดการจะเห็นข้อมูลนี้ในแท็บแรงงานและต้นทุน
           </DialogDescription>
         </DialogHeader>
 
@@ -156,7 +156,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="labor-rate">
-                อัตรา/ชม. (฿) <span className="text-destructive">*</span>
+                อัตรา / ชม. (฿) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="labor-rate"
@@ -188,7 +188,7 @@ export function LaborEntryForm({ workOrderId, open, onClose }: LaborEntryFormPro
             <Label htmlFor="labor-desc">หมายเหตุ</Label>
             <Textarea
               id="labor-desc"
-              placeholder="คำอธิบายงานที่ทำ (ไม่บังคับ)…"
+              placeholder="อธิบายงานที่ดำเนินการ (ไม่บังคับ)…"
               rows={2}
               {...form.register('description')}
             />

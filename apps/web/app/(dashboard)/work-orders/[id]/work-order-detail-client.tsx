@@ -5,13 +5,14 @@
  *
  * Layout:
  *   - Header: WO number, title, status badge, action buttons
- *   - Tabs: รายละเอียด | แรงงานและต้นทุน | อะไหล่ที่ใช้ | เอกสารแนบ | ความคิดเห็น | ประวัติ
+ *   - Tabs: Details | Labor & Cost | Parts | Attachments | Comments | History
  *   - Each tab content is lazy-loaded and cached independently
  *   - Real-time comments via Socket.io (useWorkOrderRealtime)
  */
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { format } from 'date-fns'
 import { formatThaiDate, formatThaiDateTime } from '@/lib/formatThaiDate'
 import {
   ArrowLeft,

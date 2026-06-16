@@ -115,11 +115,11 @@ export interface AIAssistPanelProps {
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'assistant',
-  content: `สวัสดี! ฉันสามารถสร้างใบสั่งงานจากภาษาธรรมชาติได้
+  content: `สวัสดี! ฉันสามารถสร้างใบสั่งงานจากภาษาพูดได้เลย
 
-ลองพิมพ์: *"ปั๊ม P-101 รั่วมาก ความเร่งด่วนวิกฤต"*
+ลองพิมพ์: *"ปั๊ม P-101 รั่วหนัก ความเร่งด่วนวิกฤต"*
 
-หรือเลือกสินทรัพย์ด้านล่างเพื่อให้บริบทดีขึ้น — ฉันจะใช้ประวัติการซ่อมบำรุงเพื่อแนะนำความเร่งด่วนและประเภทงาน`,
+หรือเลือกสินทรัพย์ด้านล่างเพื่อให้บริบทที่ดีขึ้น — ฉันจะใช้ประวัติการซ่อมบำรุงเพื่อแนะนำความเร่งด่วนและประเภทงานที่เหมาะสม`,
 }
 
 const TYPE_LABELS: Record<WOType, string> = {
@@ -304,7 +304,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
 
           // Build the full response text to stream
           const responseText = [
-            `นี่คือร่างใบสั่งงานตามที่คุณอธิบาย:\n\n`,
+            `Here's a draft work order based on your description:\n\n`,
             `**${draft.title}**\n\n`,
             draft.description,
           ].join('')
@@ -319,7 +319,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
           })
         },
         onError: (err) => {
-          const errText = err instanceof Error ? err.message : 'AI request failed'
+          const errText = err instanceof Error ? err.message : 'คำขอ AI ล้มเหลว'
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId ? { ...m, content: `⚠ ${errText}`, typing: false } : m,
@@ -353,7 +353,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
   function handleConfirm() {
     if (!currentDraft) return
     if (!currentDraft.assetId) {
-      toast.warning('ยังไม่เลือกสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อน')
+      toast.warning('ยังไม่ได้เลือกสินทรัพย์ — กรุณาแก้ไขฟอร์มเพื่อเลือกสินทรัพย์ก่อน')
       handleEdit()
       return
     }
@@ -372,12 +372,12 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
       },
       {
         onSuccess: (result) => {
-          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว!`)
+          toast.success(`Work order ${result.woNumber} created!`)
           onClose()
           router.push(`/work-orders/${result.id}`)
         },
         onError: (err) => {
-          toast.error(err instanceof Error ? err.message : 'สร้างใบสั่งงานไม่สำเร็จ')
+          toast.error(err instanceof Error ? err.message : 'Failed to create work order')
         },
       },
     )
@@ -575,7 +575,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
                   size="icon"
                   className="h-8 w-8"
                   onClick={toggleVoice}
-                  title={isListening ? 'หยุดฟัง' : 'รับเสียง'}
+                  title={isListening ? 'Stop listening' : 'Voice input'}
                 >
                   {isListening ? (
                     <MicOff className="h-3.5 w-3.5" />
@@ -603,7 +603,7 @@ export function AIAssistPanel({ open, onClose, initialAssetId }: AIAssistPanelPr
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground">
-            ขับเคลื่อนโดย Claude · Shift+Enter ขึ้นบรรทัดใหม่ · ตรวจสอบก่อนบันทึกเสมอ
+            Powered by Claude · Shift+Enter for newline · Always review before saving
           </p>
         </div>
       </SheetContent>
@@ -767,7 +767,7 @@ function AssetContextSelector({
         <span className={selectedAsset ? 'font-medium text-foreground' : 'text-muted-foreground'}>
           {selectedAsset
             ? `${selectedAsset.assetNumber} — ${selectedAsset.name}`
-            : 'ไม่ระบุ (ไม่บังคับ)'}
+            : 'None (optional)'}
         </span>
         <div className="flex items-center gap-1 ml-1">
           {selectedAsset && (
@@ -831,7 +831,7 @@ function AssetContextSelector({
               <p className="px-3 py-3 text-xs text-muted-foreground">ไม่พบสินทรัพย์</p>
             ) : (
               <p className="px-3 py-3 text-xs text-muted-foreground">
-                พิมพ์ 2 ตัวอักษรขึ้นไปเพื่อค้นหา
+                Type 2+ characters to search.
               </p>
             )}
           </div>

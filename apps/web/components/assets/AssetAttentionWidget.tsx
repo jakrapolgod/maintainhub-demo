@@ -43,19 +43,23 @@ const REASON_CONFIG: Record<
     color: string
   }
 > = {
-  OVERDUE_PM: { label: 'PM Overdue', icon: Clock, color: 'bg-red-100 text-red-700 border-red-200' },
+  OVERDUE_PM: {
+    label: 'PM เกินกำหนด',
+    icon: Clock,
+    color: 'bg-red-100 text-red-700 border-red-200',
+  },
   WARRANTY_EXPIRING: {
-    label: 'Warranty Expiring',
+    label: 'การรับประกันใกล้หมด',
     icon: ShieldAlert,
     color: 'bg-amber-100 text-amber-700 border-amber-200',
   },
   HIGH_MTTR: {
-    label: 'High Failure Rate',
+    label: 'อัตราความเสียสูง',
     icon: Wrench,
     color: 'bg-orange-100 text-orange-700 border-orange-200',
   },
   OPEN_EMERGENCY_WO: {
-    label: 'Emergency WO Open',
+    label: 'ใบสั่งงานฉุกเฉินเปิดอยู่',
     icon: AlertTriangle,
     color: 'bg-purple-100 text-purple-700 border-purple-200',
   },
@@ -79,7 +83,7 @@ export function AssetAttentionWidget({ limit = 5, className }: AssetAttentionWid
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <AlertTriangle className="h-4 w-4 text-destructive" />
-          Assets Needing Attention
+          สินทรัพย์ที่ต้องดูแล
           {data?.totalCount ? (
             <Badge variant="destructive" className="text-xs h-5 px-1.5">
               {data.totalCount}
@@ -100,7 +104,7 @@ export function AssetAttentionWidget({ limit = 5, className }: AssetAttentionWid
         {error && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
             <AlertTriangle className="h-4 w-4 shrink-0" />
-            Failed to load attention items
+            โหลดข้อมูลไม่สำเร็จ
           </div>
         )}
 
@@ -109,8 +113,8 @@ export function AssetAttentionWidget({ limit = 5, className }: AssetAttentionWid
             <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
               <ShieldAlert className="h-5 w-5 text-emerald-600" />
             </div>
-            <p className="text-sm font-medium text-emerald-700">All clear</p>
-            <p className="text-xs text-muted-foreground">No assets require immediate attention</p>
+            <p className="text-sm font-medium text-emerald-700">ทุกอย่างปกติดี</p>
+            <p className="text-xs text-muted-foreground">ไม่มีสินทรัพย์ที่ต้องดูแลเร่งด่วน</p>
           </div>
         )}
 
@@ -123,7 +127,7 @@ export function AssetAttentionWidget({ limit = 5, className }: AssetAttentionWid
             href="/assets?hasOpenWOs=true"
             className="flex items-center justify-center gap-1 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
-            View all {data?.totalCount} assets
+            ดูทั้งหมด {data?.totalCount} สินทรัพย์
             <ChevronRight className="h-3 w-3" />
           </Link>
         )}
@@ -194,27 +198,27 @@ function buildContextLine(
 ): string | null {
   switch (reason) {
     case 'OVERDUE_PM': {
-      if (!dueDate) return 'PM schedule overdue'
+      if (!dueDate) return 'แผน PM เกินกำหนด'
       const d = new Date(dueDate)
-      if (!isValid(d)) return 'PM schedule overdue'
+      if (!isValid(d)) return 'แผน PM เกินกำหนด'
       const days = differenceInDays(new Date(), d)
-      return days === 0 ? 'PM due today' : `PM overdue by ${days} day${days !== 1 ? 's' : ''}`
+      return days === 0 ? 'PM ครบกำหนดวันนี้' : `PM เกินกำหนด ${days} วัน`
     }
     case 'WARRANTY_EXPIRING': {
-      if (!dueDate) return 'Warranty expiring soon'
+      if (!dueDate) return 'การรับประกันใกล้หมดอายุ'
       const d = new Date(dueDate)
-      if (!isValid(d)) return 'Warranty expiring soon'
+      if (!isValid(d)) return 'การรับประกันใกล้หมดอายุ'
       const days = differenceInDays(d, new Date())
       return days <= 0
-        ? 'Warranty expired'
-        : `Warranty expires in ${days} day${days !== 1 ? 's' : ''} (${format(d, 'MMM d')})`
+        ? 'การรับประกันหมดอายุแล้ว'
+        : `การรับประกันหมดใน ${days} วัน (${format(d, 'MMM d')})`
     }
     case 'HIGH_MTTR':
       return mttrHours !== null
-        ? `Avg repair time: ${mttrHours.toFixed(0)}h`
-        : 'High mean repair time'
+        ? `เวลาซ่อมเฉลี่ย: ${mttrHours.toFixed(0)} ชม.`
+        : 'ระยะเวลาซ่อมเฉลี่ยสูง'
     case 'OPEN_EMERGENCY_WO':
-      return 'Open emergency work order'
+      return 'มีใบสั่งงานฉุกเฉินที่เปิดอยู่'
     default:
       return null
   }

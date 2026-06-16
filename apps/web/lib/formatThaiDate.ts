@@ -1,58 +1,41 @@
-const THAI_DATE_OPTS: Intl.DateTimeFormatOptions = {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  calendar: 'buddhist',
-}
-
-const THAI_DATETIME_OPTS: Intl.DateTimeFormatOptions = {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  calendar: 'buddhist',
-}
-
-const THAI_SHORT_OPTS: Intl.DateTimeFormatOptions = {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  calendar: 'buddhist',
-}
-
-function toDate(iso: string | Date | null | undefined): Date | null {
-  if (!iso) return null
-  const d = iso instanceof Date ? iso : new Date(iso)
-  return isNaN(d.getTime()) ? null : d
-}
-
 export function formatThaiDate(iso: string | Date | null | undefined): string {
-  const d = toDate(iso)
-  if (!d) return '—'
-  return d.toLocaleDateString('th-TH', THAI_DATE_OPTS)
+  if (!iso) return '—'
+  const d = new Date(iso as string)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function formatThaiDateTime(iso: string | Date | null | undefined): string {
-  const d = toDate(iso)
-  if (!d) return '—'
-  return d.toLocaleString('th-TH', THAI_DATETIME_OPTS)
+  if (!iso) return '—'
+  const d = new Date(iso as string)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function formatThaiDateShort(iso: string | Date | null | undefined): string {
-  const d = toDate(iso)
-  if (!d) return '—'
-  return d.toLocaleDateString('th-TH', THAI_SHORT_OPTS)
+  if (!iso) return '—'
+  const d = new Date(iso as string)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
 }
 
 export function formatRelativeThai(iso: string | Date | null | undefined): string {
-  const d = toDate(iso)
-  if (!d) return '—'
+  if (!iso) return '—'
+  const d = new Date(iso as string)
+  if (isNaN(d.getTime())) return '—'
   const diffMs = Date.now() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60_000)
-  if (diffMin < 1) return 'เพิ่งกี้'
-  if (diffMin < 60) return `${diffMin} น. ที่แล้ว`
-  const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return `${diffHr} ชม. ที่แล้ว`
-  return `${Math.floor(diffHr / 24)} วันที่แล้ว`
+  const diffMins = Math.floor(diffMs / 60_000)
+  const diffHours = Math.floor(diffMs / 3_600_000)
+  const diffDays = Math.floor(diffMs / 86_400_000)
+  if (diffMins < 1) return 'เพิ่งกี้'
+  if (diffMins < 60) return `${diffMins} นาทีที่แล้ว`
+  if (diffHours < 24) return `${diffHours} ชั่วโมงที่แล้ว`
+  if (diffDays < 30) return `${diffDays} วันที่แล้ว`
+  return formatThaiDate(iso)
 }

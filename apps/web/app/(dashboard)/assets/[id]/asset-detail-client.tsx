@@ -7,36 +7,71 @@
  * Tabs: Overview | Work Orders | PM Schedules | Documents | Metrics | QR Code
  */
 import { useState, useCallback } from 'react'
-import { useRouter }    from 'next/navigation'
-import Link             from 'next/link'
-import { useDropzone }  from 'react-dropzone'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useDropzone } from 'react-dropzone'
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from 'recharts'
-import { format }       from 'date-fns'
+
 import {
-  ArrowLeft, Settings, AlertTriangle, CheckCircle, Wrench,
-  Archive, MapPin, FileText, QrCode, BarChart2, History,
-  Upload, Trash2, Download, Printer, ExternalLink, RefreshCw,
+  ArrowLeft,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
+  Wrench,
+  Archive,
+  MapPin,
+  FileText,
+  QrCode,
+  BarChart2,
+  History,
+  Upload,
+  Trash2,
+  Download,
+  Printer,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { Button }   from '@/components/ui/button'
-import { Badge }    from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 import { CriticalityBadge, AssetStatusBadge } from '@/components/assets/AssetBadges'
 import { AssetForm } from '@/components/assets/AssetForm'
 
 import {
-  useAsset, useAssetMetrics, useAssetWorkOrders, useAssetPMSchedules,
-  useAssetDocuments, useUpdateAsset, useChangeAssetStatus,
-  useDecommissionAsset, useUploadAssetDocument, useDeleteAssetDocument,
+  useAsset,
+  useAssetMetrics,
+  useAssetWorkOrders,
+  useAssetPMSchedules,
+  useAssetDocuments,
+  useUpdateAsset,
+  useChangeAssetStatus,
+  useDecommissionAsset,
+  useUploadAssetDocument,
+  useDeleteAssetDocument,
 } from '@/hooks/useAssets'
 import { getAssetQRCode, getAssetLabelUrl } from '@/lib/api/assets'
 import type { UpdateAssetPayload } from '@/lib/api/assets'
@@ -44,17 +79,17 @@ import type { UpdateAssetPayload } from '@/lib/api/assets'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function AssetDetailClient({ id }: { id: string }) {
-  const router  = useRouter()
+  const router = useRouter()
   const { data: asset, isPending, error, refetch } = useAsset(id)
 
-  const [editOpen,        setEditOpen]        = useState(false)
-  const [decommOpen,      setDecommOpen]      = useState(false)
-  const [decommReason,    setDecommReason]    = useState('')
-  const [activeTab,       setActiveTab]       = useState('overview')
+  const [editOpen, setEditOpen] = useState(false)
+  const [decommOpen, setDecommOpen] = useState(false)
+  const [decommReason, setDecommReason] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
 
-  const updateMutation      = useUpdateAsset(id)
-  const statusMutation      = useChangeAssetStatus(id)
-  const decommMutation      = useDecommissionAsset(id)
+  const updateMutation = useUpdateAsset(id)
+  const statusMutation = useChangeAssetStatus(id)
+  const decommMutation = useDecommissionAsset(id)
 
   // ── Loading / error ────────────────────────────────────────────────────────
 
@@ -63,8 +98,10 @@ export function AssetDetailClient({ id }: { id: string }) {
     return (
       <div className="flex flex-col items-center gap-4 p-12">
         <AlertTriangle className="h-10 w-10 text-muted-foreground" />
-        <p className="text-muted-foreground">Asset not found.</p>
-        <Button variant="outline" onClick={() => router.back()}>Go back</Button>
+        <p className="text-muted-foreground">ไม่พบสินทรัพย์</p>
+        <Button variant="outline" onClick={() => router.back()}>
+          กลับ
+        </Button>
       </div>
     )
   }
@@ -77,7 +114,9 @@ export function AssetDetailClient({ id }: { id: string }) {
       <div className="border-b bg-background px-6 py-4 shrink-0">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <Link href="/assets" className="hover:underline">Assets</Link>
+          <Link href="/assets" className="hover:underline">
+            สินทรัพย์
+          </Link>
           <span>/</span>
           {asset.parentId && (
             <>
@@ -109,31 +148,34 @@ export function AssetDetailClient({ id }: { id: string }) {
           <div className="flex items-center gap-2 shrink-0">
             {!isDecommissioned && (
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                <Settings className="h-4 w-4 mr-1" />Edit
+                <Settings className="h-4 w-4 mr-1" />
+                แก้ไข
               </Button>
             )}
             {asset.status === 'OPERATIONAL' && (
               <Button
-                variant="outline" size="sm"
+                variant="outline"
+                size="sm"
                 onClick={() => statusMutation.mutate({ newStatus: 'UNDER_MAINTENANCE' })}
               >
-                <Wrench className="h-4 w-4 mr-1" />Set Maintenance
+                <Wrench className="h-4 w-4 mr-1" />
+                ส่งซ่อม
               </Button>
             )}
             {asset.status === 'UNDER_MAINTENANCE' && (
               <Button
-                variant="outline" size="sm"
+                variant="outline"
+                size="sm"
                 onClick={() => statusMutation.mutate({ newStatus: 'OPERATIONAL' })}
               >
-                <CheckCircle className="h-4 w-4 mr-1" />Set Operational
+                <CheckCircle className="h-4 w-4 mr-1" />
+                พร้อมใช้งาน
               </Button>
             )}
             {!isDecommissioned && (
-              <Button
-                variant="destructive" size="sm"
-                onClick={() => setDecommOpen(true)}
-              >
-                <Archive className="h-4 w-4 mr-1" />Decommission
+              <Button variant="destructive" size="sm" onClick={() => setDecommOpen(true)}>
+                <Archive className="h-4 w-4 mr-1" />
+                ปลดระวาง
               </Button>
             )}
           </div>
@@ -141,11 +183,32 @@ export function AssetDetailClient({ id }: { id: string }) {
 
         {/* Quick stats */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
-          <StatCard label="MTBF" value={asset.metrics.mtbfHours > 0 ? `${asset.metrics.mtbfHours.toFixed(0)}h` : '—'} />
-          <StatCard label="MTTR" value={asset.metrics.mttrHours > 0 ? `${asset.metrics.mttrHours.toFixed(0)}h` : '—'} />
-          <StatCard label="Availability" value={`${asset.metrics.availability.toFixed(1)}%`} highlight={asset.metrics.availability < 90} />
-          <StatCard label="Total Cost" value={asset.metrics.totalLifetimeCost > 0 ? `฿${(asset.metrics.totalLifetimeCost / 1000).toFixed(1)}k` : '—'} />
-          <StatCard label="Open WOs" value={String(asset.metrics.openWorkOrders)} highlight={asset.metrics.openWorkOrders > 0} />
+          <StatCard
+            label="MTBF"
+            value={asset.metrics.mtbfHours > 0 ? `${asset.metrics.mtbfHours.toFixed(0)}h` : '—'}
+          />
+          <StatCard
+            label="MTTR"
+            value={asset.metrics.mttrHours > 0 ? `${asset.metrics.mttrHours.toFixed(0)}h` : '—'}
+          />
+          <StatCard
+            label="ความพร้อม"
+            value={`${asset.metrics.availability.toFixed(1)}%`}
+            highlight={asset.metrics.availability < 90}
+          />
+          <StatCard
+            label="ต้นทุนรวม"
+            value={
+              asset.metrics.totalLifetimeCost > 0
+                ? `฿${(asset.metrics.totalLifetimeCost / 1000).toFixed(1)}k`
+                : '—'
+            }
+          />
+          <StatCard
+            label="WO เปิด"
+            value={String(asset.metrics.openWorkOrders)}
+            highlight={asset.metrics.openWorkOrders > 0}
+          />
         </div>
       </div>
 
@@ -153,11 +216,11 @@ export function AssetDetailClient({ id }: { id: string }) {
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <TabsList className="mx-6 mt-3 shrink-0 w-fit">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="work-orders">Work Orders</TabsTrigger>
-            <TabsTrigger value="pm-schedules">PM Schedules</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="metrics">Metrics</TabsTrigger>
+            <TabsTrigger value="overview">ภาพรวม</TabsTrigger>
+            <TabsTrigger value="work-orders">ใบสั่งงาน</TabsTrigger>
+            <TabsTrigger value="pm-schedules">แผน PM</TabsTrigger>
+            <TabsTrigger value="documents">เอกสาร</TabsTrigger>
+            <TabsTrigger value="metrics">ตัวชี้วัด</TabsTrigger>
             <TabsTrigger value="qr">QR Code</TabsTrigger>
           </TabsList>
 
@@ -198,7 +261,9 @@ export function AssetDetailClient({ id }: { id: string }) {
       {/* ── Edit slide-over ───────────────────────────────────────────────── */}
       <Sheet open={editOpen} onOpenChange={setEditOpen}>
         <SheetContent className="w-full max-w-lg overflow-y-auto">
-          <SheetHeader><SheetTitle>Edit {asset.assetNumber}</SheetTitle></SheetHeader>
+          <SheetHeader>
+            <SheetTitle>แก้ไข {asset.assetNumber}</SheetTitle>
+          </SheetHeader>
           <div className="mt-4">
             <AssetForm
               asset={asset}
@@ -207,7 +272,7 @@ export function AssetDetailClient({ id }: { id: string }) {
                 setEditOpen(false)
               }}
               onCancel={() => setEditOpen(false)}
-              submitLabel="Save Changes"
+              submitLabel="บันทึก"
             />
           </div>
         </SheetContent>
@@ -219,21 +284,23 @@ export function AssetDetailClient({ id }: { id: string }) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Archive className="h-5 w-5" />
-              Decommission {asset.assetNumber}?
+              ปลดระวาง {asset.assetNumber}?
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This is irreversible. All active PM schedules will be deactivated.
+            การดำเนินการนี้ไม่สามารถย้อนกลับได้ แผน PM ที่ใช้งานอยู่ทั้งหมดจะถูกปิดใช้งาน
           </p>
           <textarea
             className="w-full rounded-md border px-3 py-2 text-sm resize-none"
             rows={3}
-            placeholder="Reason for decommissioning (required)…"
+            placeholder="เหตุผลในการปลดระวาง (จำเป็น)…"
             value={decommReason}
             onChange={(e) => setDecommReason(e.target.value)}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDecommOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDecommOpen(false)}>
+              ยกเลิก
+            </Button>
             <Button
               variant="destructive"
               disabled={!decommReason.trim() || decommMutation.isPending}
@@ -242,7 +309,7 @@ export function AssetDetailClient({ id }: { id: string }) {
                 setDecommOpen(false)
               }}
             >
-              Decommission
+              ปลดระวาง
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -253,9 +320,19 @@ export function AssetDetailClient({ id }: { id: string }) {
 
 // ── StatCard ──────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function StatCard({
+  label,
+  value,
+  highlight,
+}: {
+  label: string
+  value: string
+  highlight?: boolean
+}) {
   return (
-    <div className={`rounded-lg border px-3 py-2 ${highlight ? 'border-destructive/40 bg-destructive/5' : ''}`}>
+    <div
+      className={`rounded-lg border px-3 py-2 ${highlight ? 'border-destructive/40 bg-destructive/5' : ''}`}
+    >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className={`text-lg font-bold ${highlight ? 'text-destructive' : ''}`}>{value}</p>
     </div>
@@ -267,21 +344,48 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
 function OverviewTab({ asset }: { asset: ReturnType<typeof useAsset>['data'] & object }) {
   if (!asset) return null
   const fields = [
-    ['Category',        asset.categoryName],
-    ['Location',        asset.locationName ?? '—'],
-    ['Manufacturer',    asset.manufacturer ?? '—'],
-    ['Model',           asset.model ?? '—'],
-    ['Serial Number',   asset.serialNumber ?? '—'],
-    ['Install Date',    asset.installDate ? format(new Date(asset.installDate), 'MMM d, yyyy') : '—'],
-    ['Warranty Expiry', asset.warrantyExpiry ? format(new Date(asset.warrantyExpiry), 'MMM d, yyyy') : '—'],
-    ['Last Updated',    format(new Date(asset.updatedAt), 'MMM d, yyyy')],
+    ['หมวดหมู่', asset.categoryName],
+    ['ตำแหน่ง', asset.locationName ?? '—'],
+    ['ผู้ผลิต', asset.manufacturer ?? '—'],
+    ['รุ่น', asset.model ?? '—'],
+    ['หมายเลขซีเรียล', asset.serialNumber ?? '—'],
+    [
+      'วันที่ติดตั้ง',
+      asset.installDate
+        ? new Date(asset.installDate).toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : '—',
+    ],
+    [
+      'วันหมดประกัน',
+      asset.warrantyExpiry
+        ? new Date(asset.warrantyExpiry).toLocaleDateString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : '—',
+    ],
+    [
+      'อัปเดตล่าสุด',
+      new Date(asset.updatedAt).toLocaleDateString('th-TH', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }),
+    ],
   ]
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-4">
       {/* Main fields */}
       <Card className="lg:col-span-2">
-        <CardHeader><CardTitle className="text-base">Asset Information</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">ข้อมูลสินทรัพย์</CardTitle>
+        </CardHeader>
         <CardContent>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             {fields.map(([k, v]) => (
@@ -293,7 +397,7 @@ function OverviewTab({ asset }: { asset: ReturnType<typeof useAsset>['data'] & o
           </dl>
           {asset.description && (
             <div className="mt-4 pt-4 border-t">
-              <p className="text-xs text-muted-foreground mb-1">Description</p>
+              <p className="text-xs text-muted-foreground mb-1">คำอธิบาย</p>
               <p className="text-sm">{asset.description}</p>
             </div>
           )}
@@ -304,12 +408,20 @@ function OverviewTab({ asset }: { asset: ReturnType<typeof useAsset>['data'] & o
       <div className="space-y-4">
         {asset.children.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-base">Sub-assets ({asset.children.length})</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">สินทรัพย์ย่อย ({asset.children.length})</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
               {asset.children.map((child) => (
-                <Link key={child.id} href={`/assets/${child.id}`} className="flex items-center gap-2 text-sm hover:underline p-1 rounded hover:bg-accent">
+                <Link
+                  key={child.id}
+                  href={`/assets/${child.id}`}
+                  className="flex items-center gap-2 text-sm hover:underline p-1 rounded hover:bg-accent"
+                >
                   <CriticalityBadge criticality={child.criticality} dotOnly />
-                  <span className="font-mono text-xs text-muted-foreground">{child.assetNumber}</span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {child.assetNumber}
+                  </span>
                   <span className="truncate">{child.name}</span>
                 </Link>
               ))}
@@ -320,7 +432,9 @@ function OverviewTab({ asset }: { asset: ReturnType<typeof useAsset>['data'] & o
         {/* Recent WOs */}
         {asset.recentWorkOrders.length > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-base">Recent Work Orders</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">ใบสั่งงานล่าสุด</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
               {asset.recentWorkOrders.slice(0, 5).map((wo) => (
                 <div key={wo.id} className="flex items-center justify-between text-xs">
@@ -328,7 +442,10 @@ function OverviewTab({ asset }: { asset: ReturnType<typeof useAsset>['data'] & o
                     <span className="font-mono text-muted-foreground">{wo.woNumber}</span>
                     <p className="truncate max-w-[160px]">{wo.title}</p>
                   </div>
-                  <Badge variant={wo.status === 'COMPLETED' ? 'outline' : 'secondary'} className="text-[10px] shrink-0">
+                  <Badge
+                    variant={wo.status === 'COMPLETED' ? 'outline' : 'secondary'}
+                    className="text-[10px] shrink-0"
+                  >
                     {wo.status.replace('_', ' ')}
                   </Badge>
                 </div>
@@ -352,8 +469,10 @@ function WorkOrdersTab({ assetId }: { assetId: string }) {
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/50">
           <tr>
-            {['WO #', 'Title', 'Type', 'Priority', 'Status', 'Completed', 'Cost'].map((h) => (
-              <th key={h} className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">{h}</th>
+            {['WO #', 'หัวข้อ', 'ประเภท', 'ความสำคัญ', 'สถานะ', 'เสร็จสิ้น', 'ต้นทุน'].map((h) => (
+              <th key={h} className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
@@ -364,9 +483,19 @@ function WorkOrdersTab({ assetId }: { assetId: string }) {
               <td className="px-3 py-2 max-w-[200px] truncate">{wo.title}</td>
               <td className="px-3 py-2 text-xs">{wo.type}</td>
               <td className="px-3 py-2 text-xs">{wo.priority}</td>
-              <td className="px-3 py-2"><Badge variant="outline" className="text-xs">{wo.status.replace('_', ' ')}</Badge></td>
+              <td className="px-3 py-2">
+                <Badge variant="outline" className="text-xs">
+                  {wo.status.replace('_', ' ')}
+                </Badge>
+              </td>
               <td className="px-3 py-2 text-xs text-muted-foreground">
-                {wo.completedAt ? format(new Date(wo.completedAt), 'MMM d, yyyy') : '—'}
+                {wo.completedAt
+                  ? new Date(wo.completedAt).toLocaleDateString('th-TH', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : '—'}
               </td>
               <td className="px-3 py-2 text-xs">
                 {wo.totalCost !== null ? `฿${wo.totalCost.toLocaleString()}` : '—'}
@@ -374,7 +503,11 @@ function WorkOrdersTab({ assetId }: { assetId: string }) {
             </tr>
           ))}
           {wos.length === 0 && (
-            <tr><td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">No work orders yet.</td></tr>
+            <tr>
+              <td colSpan={7} className="py-8 text-center text-muted-foreground text-sm">
+                ยังไม่มีใบสั่งงาน
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
@@ -397,16 +530,22 @@ function PMSchedulesTab({ assetId }: { assetId: string }) {
               <p className="text-xs text-muted-foreground">{pm.triggerType}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-muted-foreground">Next due</p>
+              <p className="text-xs text-muted-foreground">ครบกำหนดถัดไป</p>
               <p className="text-sm font-medium">
-                {pm.nextDue ? format(new Date(pm.nextDue), 'MMM d, yyyy') : '—'}
+                {pm.nextDue
+                  ? new Date(pm.nextDue).toLocaleDateString('th-TH', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : '—'}
               </p>
             </div>
           </CardContent>
         </Card>
       ))}
       {schedules.length === 0 && (
-        <p className="text-center text-muted-foreground text-sm py-8">No PM schedules.</p>
+        <p className="text-center text-muted-foreground text-sm py-8">ยังไม่มีแผน PM</p>
       )}
     </div>
   )
@@ -419,9 +558,12 @@ function DocumentsTab({ assetId }: { assetId: string }) {
   const uploadMutation = useUploadAssetDocument(assetId)
   const deleteMutation = useDeleteAssetDocument(assetId)
 
-  const onDrop = useCallback((files: File[]) => {
-    files.forEach((f) => uploadMutation.mutate(f))
-  }, [uploadMutation])
+  const onDrop = useCallback(
+    (files: File[]) => {
+      files.forEach((f) => uploadMutation.mutate(f))
+    },
+    [uploadMutation],
+  )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -441,11 +583,9 @@ function DocumentsTab({ assetId }: { assetId: string }) {
         <input {...getInputProps()} />
         <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          {isDragActive ? 'Drop files here…' : 'Drag & drop files, or click to select (max 50 MB)'}
+          {isDragActive ? 'วางไฟล์ที่นี่…' : 'ลากและวางไฟล์ หรือคลิกเพื่อเลือก (สูงสุด 50 MB)'}
         </p>
-        {uploadMutation.isPending && (
-          <p className="text-xs text-primary mt-1">Uploading…</p>
-        )}
+        {uploadMutation.isPending && <p className="text-xs text-primary mt-1">กำลังอัปโหลด…</p>}
       </div>
 
       {/* File grid */}
@@ -459,7 +599,12 @@ function DocumentsTab({ assetId }: { assetId: string }) {
                     <FileText className="h-5 w-5 text-muted-foreground mb-1" />
                     <p className="text-sm font-medium truncate">{doc.fileName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {(doc.fileSize / 1024).toFixed(0)} KB · {format(new Date(doc.uploadedAt), 'MMM d, yyyy')}
+                      {(doc.fileSize / 1024).toFixed(0)} KB ·{' '}
+                      {new Date(doc.uploadedAt).toLocaleDateString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -471,7 +616,9 @@ function DocumentsTab({ assetId }: { assetId: string }) {
                       </a>
                     )}
                     <Button
-                      variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
                       onClick={() => deleteMutation.mutate(doc.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -489,7 +636,13 @@ function DocumentsTab({ assetId }: { assetId: string }) {
 
 // ── Metrics tab ───────────────────────────────────────────────────────────────
 
-function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<ReturnType<typeof useAsset>['data']> }) {
+function MetricsTab({
+  assetId,
+  asset,
+}: {
+  assetId: string
+  asset: NonNullable<ReturnType<typeof useAsset>['data']>
+}) {
   const { data: metrics, isPending } = useAssetMetrics(assetId)
 
   if (isPending) return <Skeleton className="h-64 w-full mt-4 rounded-xl" />
@@ -501,13 +654,19 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="MTBF" value={`${metrics.mtbfHours.toFixed(1)}h`} />
         <StatCard label="MTTR" value={`${metrics.mttrHours.toFixed(1)}h`} />
-        <StatCard label="Availability" value={`${metrics.availability.toFixed(1)}%`} highlight={metrics.availability < 90} />
-        <StatCard label="Failures (12mo)" value={String(metrics.failureCount)} />
+        <StatCard
+          label="ความพร้อม"
+          value={`${metrics.availability.toFixed(1)}%`}
+          highlight={metrics.availability < 90}
+        />
+        <StatCard label="ความเสีย (12 เดือน)" value={String(metrics.failureCount)} />
       </div>
 
       {/* MTTR trend chart */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Monthly MTTR Trend (last 12 months)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">แนวโน้ม MTTR รายเดือน (12 เดือนล่าสุด)</CardTitle>
+        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={metrics.mttrTrend}>
@@ -515,7 +674,14 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis unit="h" tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => [`${Number(v).toFixed(1)}h`, 'MTTR']} />
-              <Line type="monotone" dataKey="mttrHours" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} name="MTTR (h)" />
+              <Line
+                type="monotone"
+                dataKey="mttrHours"
+                stroke="hsl(var(--primary))"
+                strokeWidth={2}
+                dot={false}
+                name="MTTR (h)"
+              />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -523,21 +689,32 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
 
       {/* Cost breakdown */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Lifetime Cost Breakdown</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">การแจกแจงต้นทุนตลอดอายุ</CardTitle>
+        </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={[{
-              name: 'Cost',
-              Labor: metrics.totalLaborCost,
-              Parts: metrics.totalPartsCost,
-            }]}>
+            <BarChart
+              data={[
+                {
+                  name: 'Cost',
+                  Labor: metrics.totalLaborCost,
+                  Parts: metrics.totalPartsCost,
+                },
+              ]}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => [`฿${Number(v).toLocaleString()}`, '']} />
               <Legend />
-              <Bar dataKey="Labor" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Parts" fill="hsl(var(--primary) / 0.4)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Labor" name="แรงงาน" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="Parts"
+                name="อะไหล่"
+                fill="hsl(var(--primary) / 0.4)"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -545,7 +722,9 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
 
       {/* Availability gauge (simple text-based) */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Availability</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">ความพร้อมใช้งาน</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex-1 h-4 rounded-full bg-muted overflow-hidden">
@@ -554,10 +733,12 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
                 style={{ width: `${Math.min(metrics.availability, 100)}%` }}
               />
             </div>
-            <span className="text-lg font-bold w-16 text-right">{metrics.availability.toFixed(1)}%</span>
+            <span className="text-lg font-bold w-16 text-right">
+              {metrics.availability.toFixed(1)}%
+            </span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Based on {metrics.failureCount} corrective WOs in the last 12 months (MTBF/{`MTBF+MTTR`})
+            คำนวณจาก {metrics.failureCount} ใบสั่งงานแก้ไขใน 12 เดือนล่าสุด (MTBF/{`MTBF+MTTR`})
           </p>
         </CardContent>
       </Card>
@@ -568,9 +749,9 @@ function MetricsTab({ assetId, asset }: { assetId: string; asset: NonNullable<Re
 // ── QR Code tab ───────────────────────────────────────────────────────────────
 
 function QRTab({ assetId, assetNumber }: { assetId: string; assetNumber: string }) {
-  const qrUrl    = getAssetQRCode(assetId)
+  const qrUrl = getAssetQRCode(assetId)
   const labelUrl = getAssetLabelUrl(assetId)
-  const token    = typeof window !== 'undefined' ? sessionStorage.getItem('mh_access_token') : null
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('mh_access_token') : null
 
   function download(url: string, filename: string) {
     const a = document.createElement('a')
@@ -583,7 +764,9 @@ function QRTab({ assetId, assetNumber }: { assetId: string; assetNumber: string 
   return (
     <div className="pt-4 flex flex-col items-center gap-6 max-w-sm mx-auto">
       <Card className="w-full">
-        <CardHeader><CardTitle className="text-center text-base">QR Code</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-center text-base">คิวอาร์โค้ด</CardTitle>
+        </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           {/* QR image */}
           <img
@@ -591,40 +774,54 @@ function QRTab({ assetId, assetNumber }: { assetId: string; assetNumber: string 
             alt={`QR code for ${assetNumber}`}
             className="w-48 h-48 rounded border"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none'
+              ;(e.target as HTMLImageElement).style.display = 'none'
             }}
           />
           <div className="flex gap-2 w-full">
-            <Button variant="outline" className="flex-1 text-xs" onClick={() => download(qrUrl, `${assetNumber}_qr.png`)}>
-              <Download className="h-3.5 w-3.5 mr-1" />Download QR
+            <Button
+              variant="outline"
+              className="flex-1 text-xs"
+              onClick={() => download(qrUrl, `${assetNumber}_qr.png`)}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              ดาวน์โหลด QR
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <Card className="w-full">
-        <CardHeader><CardTitle className="text-center text-base">Printable Label</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-center text-base">ป้ายพิมพ์</CardTitle>
+        </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <img
             src={labelUrl}
             alt={`Label for ${assetNumber}`}
             className="rounded border max-w-full"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none'
+              ;(e.target as HTMLImageElement).style.display = 'none'
             }}
           />
           <div className="flex gap-2 w-full">
-            <Button variant="outline" className="flex-1 text-xs" onClick={() => download(labelUrl, `${assetNumber}_label.png`)}>
-              <Download className="h-3.5 w-3.5 mr-1" />Download Label
+            <Button
+              variant="outline"
+              className="flex-1 text-xs"
+              onClick={() => download(labelUrl, `${assetNumber}_label.png`)}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              ดาวน์โหลดป้าย
             </Button>
             <Button
-              variant="outline" className="flex-1 text-xs"
+              variant="outline"
+              className="flex-1 text-xs"
               onClick={() => {
                 const win = window.open(labelUrl, '_blank')
                 win?.focus()
               }}
             >
-              <Printer className="h-3.5 w-3.5 mr-1" />Print
+              <Printer className="h-3.5 w-3.5 mr-1" />
+              พิมพ์
             </Button>
           </div>
         </CardContent>

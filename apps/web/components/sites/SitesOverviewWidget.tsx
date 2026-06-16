@@ -45,7 +45,7 @@ export function SitesOverviewWidget() {
     apiFetch<SitesResponse>('/sites')
       .then((data) => setSites(data.sites))
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load sites')
+        setError(err instanceof Error ? err.message : 'โหลดข้อมูลสาขาไม่สำเร็จ')
       })
       .finally(() => setLoading(false))
   }, [])
@@ -56,7 +56,7 @@ export function SitesOverviewWidget() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            Sites Overview
+            ภาพรวมสาขา
           </CardTitle>
         </CardHeader>
         <CardContent className="flex justify-center py-6">
@@ -72,7 +72,7 @@ export function SitesOverviewWidget() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            Sites Overview
+            ภาพรวมสาขา
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-2 text-sm text-destructive py-4">
@@ -89,11 +89,11 @@ export function SitesOverviewWidget() {
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            Sites Overview
+            ภาพรวมสาขา
           </CardTitle>
         </CardHeader>
         <CardContent className="py-6 text-center text-sm text-muted-foreground">
-          No sites configured yet.
+          ยังไม่มีสาขาในระบบ
         </CardContent>
       </Card>
     )
@@ -105,9 +105,9 @@ export function SitesOverviewWidget() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
-            Sites Overview
+            ภาพรวมสาขา
           </CardTitle>
-          <span className="text-xs text-muted-foreground">{sites.length} site(s)</span>
+          <span className="text-xs text-muted-foreground">{sites.length} สาขา</span>
         </div>
       </CardHeader>
       <CardContent className="space-y-2 p-3">
@@ -121,7 +121,7 @@ export function SitesOverviewWidget() {
                 <span className="text-sm font-medium">{site.name}</span>
                 {!site.isActive && (
                   <Badge variant="outline" className="text-xs py-0">
-                    Inactive
+                    ไม่ใช้งาน
                   </Badge>
                 )}
               </div>
@@ -130,11 +130,11 @@ export function SitesOverviewWidget() {
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <div className="text-right">
                 <p className="font-semibold text-foreground">{site._count.workOrders}</p>
-                <p>WOs</p>
+                <p>ใบสั่งงาน</p>
               </div>
               <div className="text-right">
                 <p className="font-semibold text-foreground">{site._count.assets}</p>
-                <p>Assets</p>
+                <p>สินทรัพย์</p>
               </div>
               <ChevronRight className="h-4 w-4" />
             </div>

@@ -34,11 +34,11 @@ import type { WOType, WOPriority } from '@/lib/api/work-orders'
 // ── Form schema ───────────────────────────────────────────────────────────────
 
 const createSchema = z.object({
-  title: z.string().min(3, 'ต้องมีอย่างน้อย 3 ตัวอักษร').max(200),
+  title: z.string().min(3, 'อย่างน้อย 3 ตัวอักษร').max(200),
   description: z.string().max(5000).optional(),
   type: z.enum(['CORRECTIVE', 'PREVENTIVE', 'INSPECTION', 'EMERGENCY']),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']),
-  assetId: z.string().min(1, 'กรุณาเลือกสินทรัพย์'),
+  assetId: z.string().min(1, 'กรุณาระบุสินทรัพย์'),
   dueDate: z.string().optional(),
 })
 
@@ -80,7 +80,7 @@ export function NewWorkOrderClient() {
       },
       {
         onSuccess: (result) => {
-          toast.success(`สร้างใบสั่งงาน ${result.woNumber} แล้ว`)
+          toast.success(`สร้างใบสั่งงาน ${result.woNumber} สำเร็จ`)
           router.push(`/work-orders/${result.id}`)
         },
       },
@@ -95,7 +95,7 @@ export function NewWorkOrderClient() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-xl font-bold">สร้างใบสั่งงาน</h1>
+          <h1 className="text-xl font-bold">สร้างใบสั่งงานใหม่</h1>
           <p className="text-sm text-muted-foreground">เลือกวิธีสร้างใบสั่งงาน</p>
         </div>
 
@@ -123,7 +123,7 @@ export function NewWorkOrderClient() {
             }}
           >
             <ClipboardList className="h-3.5 w-3.5" />
-            กรอกฟอร์ม
+            แบบฟอร์มทั่วไป
           </Button>
         </div>
       </div>
@@ -135,7 +135,7 @@ export function NewWorkOrderClient() {
             <Sparkles className="h-12 w-12 text-primary/50" />
             <h2 className="text-lg font-semibold">ผู้ช่วย AI สร้างใบสั่งงาน</h2>
             <p className="text-muted-foreground text-sm max-w-md">
-              อธิบายปัญหาการซ่อมบำรุงเป็นภาษาธรรมชาติ แล้ว Claude จะสร้างใบสั่งงานให้โดยอัตโนมัติ
+              อธิบายปัญหาการซ่อมบำรุงด้วยภาษาธรรมชาติ และ Claude จะสร้างใบสั่งงานครบถ้วนให้คุณ
             </p>
             <Button onClick={() => setAiDrawerOpen(true)} className="gap-2">
               <Sparkles className="h-4 w-4" />
@@ -154,11 +154,11 @@ export function NewWorkOrderClient() {
                   {/* Title */}
                   <div className="space-y-1.5">
                     <Label htmlFor="title">
-                      ชื่องาน <span className="text-destructive">*</span>
+                      หัวข้องาน <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="title"
-                      placeholder="เช่น เปลี่ยน mechanical seal บนปั๊ม P-101"
+                      placeholder="เช่น เปลี่ยนซีลกลของปั๊ม P-101"
                       {...form.register('title')}
                     />
                     {form.formState.errors.title && (
@@ -173,7 +173,7 @@ export function NewWorkOrderClient() {
                     <Label htmlFor="description">รายละเอียด</Label>
                     <Textarea
                       id="description"
-                      placeholder="อธิบายปัญหา อาการผิดปกติ และบริบทที่เกี่ยวข้อง…"
+                      placeholder="อธิบายปัญหา อาการ และบริบทที่เกี่ยวข้อง…"
                       rows={4}
                       {...form.register('description')}
                     />
@@ -229,7 +229,7 @@ export function NewWorkOrderClient() {
                     </Label>
                     <Input
                       id="assetId"
-                      placeholder="CUID ของสินทรัพย์"
+                      placeholder="CUID สินทรัพย์"
                       {...form.register('assetId')}
                     />
                     {form.formState.errors.assetId && (
@@ -238,7 +238,7 @@ export function NewWorkOrderClient() {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      กรอก CUID ของสินทรัพย์จากทะเบียนสินทรัพย์
+                      ระบุ CUID สินทรัพย์จากทะเบียนสินทรัพย์
                     </p>
                   </div>
 

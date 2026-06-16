@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   BarChart2,
   Settings,
+  FileText,
 } from 'lucide-react'
 
 const NAV = [
@@ -18,12 +19,21 @@ const NAV = [
   { href: '/pm-schedules', label: 'แผนบำรุงรักษา', icon: CalendarCheck },
   { href: '/analytics', label: 'วิเคราะห์ข้อมูล', icon: BarChart2 },
   { href: '/inventory', label: 'คลังอะไหล่', icon: ClipboardList },
+  { href: '/reports', label: 'รายงาน', icon: FileText },
   { href: '/settings', label: 'ตั้งค่า', icon: Settings },
 ] as const
 
 const SETTINGS_SUB = [
   { href: '/settings', label: 'ทั่วไป' },
   { href: '/settings/users', label: 'ผู้ใช้งาน' },
+] as const
+
+const REPORTS_SUB = [
+  { href: '/reports/maintenance/pm-compliance', label: 'อัตราการบำรุงรักษา' },
+  { href: '/reports/maintenance/downtime', label: 'การวิเคราะห์เวลาหยุดทำงาน' },
+  { href: '/reports/maintenance/work-order-summary', label: 'สรุปใบสั่งงาน' },
+  { href: '/reports/maintenance/corrective-actions', label: 'มาตรการแก้ไข' },
+  { href: '/reports/maintenance/ptw-summary', label: 'ใบอนุญาตความปลอดภัย' },
 ] as const
 
 function cn(...c: (string | boolean | undefined)[]) {
@@ -55,6 +65,24 @@ export function SidebarNav() {
               {href === '/settings' && active && (
                 <div className="ml-6 mt-0.5 space-y-0.5">
                   {SETTINGS_SUB.map((sub) => (
+                    <Link
+                      key={sub.href}
+                      href={sub.href}
+                      className={cn(
+                        'block rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                        pathname === sub.href
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      {sub.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {href === '/reports' && active && (
+                <div className="ml-6 mt-0.5 space-y-0.5">
+                  {REPORTS_SUB.map((sub) => (
                     <Link
                       key={sub.href}
                       href={sub.href}

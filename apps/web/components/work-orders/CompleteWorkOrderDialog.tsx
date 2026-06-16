@@ -148,7 +148,7 @@ export function CompleteWorkOrderDialog({
             ยืนยันการเสร็จสิ้นงาน
           </DialogTitle>
           <DialogDescription>
-            กรอกสรุปผลการดำเนินการ ข้อมูลนี้จะถูกบันทึกเป็นหลักฐานถาวร
+            ระบุสรุปผลการดำเนินการ ข้อมูลนี้จะถูกบันทึกอย่างถาวร
           </DialogDescription>
         </DialogHeader>
 
@@ -162,12 +162,12 @@ export function CompleteWorkOrderDialog({
               <span
                 className={`text-xs ${isResolutionOk ? 'text-muted-foreground' : 'text-amber-600'}`}
               >
-                {charCount}/10 min
+                {charCount}/10 ต่ำสุด
               </span>
             </div>
             <Textarea
               id="wo-resolution"
-              placeholder="อธิบายงานที่ทำ อะไหล่ที่เปลี่ยน การทดสอบ และผลลัพธ์…"
+              placeholder="อธิบายสิ่งที่ดำเนินการ อะไหล่ที่เปลี่ยน การทดสอบที่ทำ และผลลัพธ์…"
               rows={5}
               {...form.register('resolution')}
               className={
@@ -225,7 +225,7 @@ export function CompleteWorkOrderDialog({
                       }
                     >
                       <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="รูปแบบความเสียหาย…" />
+                        <SelectValue placeholder="รูปแบบความเสีย…" />
                       </SelectTrigger>
                       <SelectContent>
                         {modesInCategory.map((fc) => (
