@@ -74,7 +74,7 @@ const createBodySchema = z.object({
   calendarRule: calendarRuleSchema,
   meterRule: meterRuleSchema,
   conditionRule: z.record(z.unknown()).optional(),
-  taskList: z.array(taskSchema).min(1, 'At least one task is required'),
+  taskList: z.array(taskSchema).default([]),
   estimatedHours: z.number().nonnegative().optional(),
   requiredSkillIds: z.array(z.string()).optional(),
   defaultAssigneeIds: z.array(z.string()).optional(),

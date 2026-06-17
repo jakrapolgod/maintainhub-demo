@@ -66,12 +66,7 @@ export class CreatePMScheduleHandler {
       throw new DomainException('Asset not found', 'ASSET_NOT_FOUND', 404)
     }
 
-    // ── 2. Validate task list ─────────────────────────────────────────────────
-    if (!cmd.taskList || cmd.taskList.length === 0) {
-      throw new DomainException('PM schedule must have at least one task', 'EMPTY_TASK_LIST', 422)
-    }
-
-    // ── 3. Build value objects ────────────────────────────────────────────────
+    // ── 2. Build value objects ────────────────────────────────────────────────
     const calendarRule =
       cmd.calendarRule !== undefined
         ? new CalendarRule({
@@ -109,6 +104,7 @@ export class CreatePMScheduleHandler {
       defaultAssigneeIds: cmd.defaultAssigneeIds ?? [],
       advanceNoticeDays: cmd.advanceNoticeDays ?? 7,
       createdById: ctx.executingUserId,
+      isActive: true,
     })
 
     // ── 5. Persist ────────────────────────────────────────────────────────────

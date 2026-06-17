@@ -46,6 +46,9 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -64,6 +67,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 import {
   usePMSchedules,
@@ -72,8 +77,10 @@ import {
   useActivatePMSchedule,
   useDeactivatePMSchedule,
   useTriggerPMSchedule,
+  useCreatePMSchedule,
 } from '@/hooks/usePMSchedules'
-import type { PMScheduleDto, PMCalendarEntry } from '@/lib/api/pm-schedules'
+import type { PMScheduleDto, PMCalendarEntry, PMFrequency } from '@/lib/api/pm-schedules'
+import { useAssets } from '@/hooks/useAssets'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,14 +92,11 @@ function nextDueColor(nextDueAt: string | null, isOverdue: boolean): string {
   return 'text-foreground'
 }
 
-function eventUrgencyClass(entry: PMCalendarEntry): string {
-  if (entry.isOverdue) return 'bg-red-100 text-red-800 border-red-300'
-  const days = differenceInDays(
-    parseISO(entry.assignees.length > 0 ? entry.assignees[0]!.id : new Date().toISOString()),
-    new Date(),
-  )
-  if (days <= 7) return 'bg-amber-100 text-amber-800 border-amber-300'
-  return 'bg-blue-100 text-blue-800 border-blue-300'
+function eventBarClass(entry: PMCalendarEntry): string {
+  if (entry.isOverdue) return 'bg-red-600 text-white animate-pulse hover:bg-red-700'
+  if (entry.type === 'METER') return 'bg-amber-500 text-white hover:bg-amber-600'
+  if (entry.type === 'CONDITION') return 'bg-gray-400 text-white hover:bg-gray-500'
+  return 'bg-blue-500 text-white hover:bg-blue-600'
 }
 
 function typeLabel(type: string): string {
@@ -123,6 +127,17 @@ export function PMSchedulesClient() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
 
+  // ── Quick-create sheet ──────────────────────────────────────────────────────
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    assetId: '',
+    type: 'CALENDAR' as 'CALENDAR' | 'METER' | 'CONDITION',
+    frequency: 'monthly' as PMFrequency,
+    estimatedHours: '',
+    description: '',
+  })
+
   // ── List query ──────────────────────────────────────────────────────────────
   const listFilters = useMemo(
     () => ({
@@ -150,6 +165,10 @@ export function PMSchedulesClient() {
   const activateMut = useActivatePMSchedule()
   const deactivateMut = useDeactivatePMSchedule()
   const triggerMut = useTriggerPMSchedule()
+  const createMut = useCreatePMSchedule()
+
+  // ── Assets for create form ──────────────────────────────────────────────────
+  const { data: assetsData } = useAssets({ limit: 200 })
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 300)
@@ -169,6 +188,36 @@ export function PMSchedulesClient() {
       { id },
       {
         onSuccess: () => setSheetOpen(false),
+      },
+    )
+  }
+
+  function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    createMut.mutate(
+      {
+        title: createForm.title,
+        assetId: createForm.assetId,
+        type: createForm.type,
+        taskList: [],
+        ...(createForm.estimatedHours && { estimatedHours: parseFloat(createForm.estimatedHours) }),
+        ...(createForm.description && { description: createForm.description }),
+        ...(createForm.type === 'CALENDAR' && {
+          calendarRule: { frequency: createForm.frequency, interval: 1 },
+        }),
+      },
+      {
+        onSuccess: () => {
+          setCreateOpen(false)
+          setCreateForm({
+            title: '',
+            assetId: '',
+            type: 'CALENDAR',
+            frequency: 'monthly',
+            estimatedHours: '',
+            description: '',
+          })
+        },
       },
     )
   }
@@ -194,10 +243,8 @@ export function PMSchedulesClient() {
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button asChild size="sm">
-              <Link href="/pm-schedules/new">
-                <Plus className="h-4 w-4 mr-1" /> แผนใหม่
-              </Link>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" /> สร้างแผนบำรุงรักษา
             </Button>
           </div>
         </div>
@@ -248,7 +295,7 @@ export function PMSchedulesClient() {
                 ))}
               </div>
             ) : (listData?.items.length ?? 0) === 0 ? (
-              <EmptyState onNew={() => router.push('/pm-schedules/new')} />
+              <EmptyState onNew={() => setCreateOpen(true)} />
             ) : (
               <div className="overflow-x-auto rounded-xl border bg-card">
                 <table className="w-full text-sm">
@@ -497,36 +544,186 @@ export function PMSchedulesClient() {
         )}
       </div>
 
+      {/* ── Quick-create sheet ────────────────────────────────────────────── */}
+      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
+        <SheetContent side="right" className="w-[480px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>สร้างแผนบำรุงรักษา</SheetTitle>
+            <SheetDescription>กรอกข้อมูลพื้นฐาน — แก้ไขรายละเอียดได้ในภายหลัง</SheetDescription>
+          </SheetHeader>
+          <form onSubmit={handleCreate} className="mt-6 space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-title">
+                ชื่อแผน <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="cf-title"
+                required
+                value={createForm.title}
+                onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="เช่น PM รายเดือน ปั๊ม P-001"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-asset">
+                สินทรัพย์ <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={createForm.assetId}
+                onValueChange={(v) => setCreateForm((f) => ({ ...f, assetId: v }))}
+                required
+              >
+                <SelectTrigger id="cf-asset">
+                  <SelectValue placeholder="เลือกสินทรัพย์" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(assetsData?.items ?? []).map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.assetNumber} — {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-type">ประเภทการกระตุ้น</Label>
+              <Select
+                value={createForm.type}
+                onValueChange={(v) => setCreateForm((f) => ({ ...f, type: v as typeof f.type }))}
+              >
+                <SelectTrigger id="cf-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CALENDAR">ตามปฏิทิน</SelectItem>
+                  <SelectItem value="METER">ตามมาตรวัด</SelectItem>
+                  <SelectItem value="CONDITION">ตามสภาพ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {createForm.type === 'CALENDAR' && (
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-freq">ความถี่</Label>
+                <Select
+                  value={createForm.frequency}
+                  onValueChange={(v) =>
+                    setCreateForm((f) => ({ ...f, frequency: v as PMFrequency }))
+                  }
+                >
+                  <SelectTrigger id="cf-freq">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">รายวัน</SelectItem>
+                    <SelectItem value="weekly">รายสัปดาห์</SelectItem>
+                    <SelectItem value="monthly">รายเดือน</SelectItem>
+                    <SelectItem value="quarterly">รายไตรมาส</SelectItem>
+                    <SelectItem value="annually">รายปี</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-hours">ชั่วโมงโดยประมาณ</Label>
+              <Input
+                id="cf-hours"
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={createForm.estimatedHours}
+                onChange={(e) => setCreateForm((f) => ({ ...f, estimatedHours: e.target.value }))}
+                placeholder="เช่น 2.5"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-desc">รายละเอียด</Label>
+              <Textarea
+                id="cf-desc"
+                rows={3}
+                value={createForm.description}
+                onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="รายละเอียดแผนบำรุงรักษา..."
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={createMut.isPending || !createForm.title || !createForm.assetId}
+              >
+                {createMut.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                สร้างแผน
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                ยกเลิก
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
       {/* ── Schedule detail slide-over ─────────────────────────────────────── */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-96">
+        <SheetContent side="right" className="w-[480px] sm:w-[540px] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{selectedEntry?.title}</SheetTitle>
+            <SheetTitle className="text-base font-semibold pr-6">{selectedEntry?.title}</SheetTitle>
             <SheetDescription>
               {selectedEntry?.assetName} · {selectedEntry ? typeLabel(selectedEntry.type) : ''}
             </SheetDescription>
           </SheetHeader>
           {selectedEntry && (
-            <div className="mt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="mt-6 space-y-6">
+              {/* Status badge */}
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                    selectedEntry.isOverdue
+                      ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400'
+                      : 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400'
+                  }`}
+                >
+                  {selectedEntry.isOverdue ? '⚠️ เกินกำหนด' : '✓ ตามกำหนด'}
+                </span>
+                <Badge variant={typeBadgeVariant(selectedEntry.type)}>
+                  {typeLabel(selectedEntry.type)}
+                </Badge>
+              </div>
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">เวลาประมาณ</p>
-                  <p className="font-medium">{selectedEntry.estimatedHours} ชม.</p>
+                  <p className="text-xs text-muted-foreground mb-1">สินทรัพย์</p>
+                  <p className="font-medium">{selectedEntry.assetName || 'ไม่ระบุ'}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">สถานะ</p>
-                  <p
-                    className={`font-medium ${selectedEntry.isOverdue ? 'text-red-600' : 'text-green-600'}`}
-                  >
-                    {selectedEntry.isOverdue ? 'เกินกำหนด' : 'ตามกำหนด'}
-                  </p>
+                  <p className="text-xs text-muted-foreground mb-1">หมายเลขสินทรัพย์</p>
+                  <p className="font-medium">{selectedEntry.assetNumber || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">เวลาโดยประมาณ</p>
+                  <p className="font-medium">{selectedEntry.estimatedHours || 0} ชั่วโมง</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">ประเภทแผน</p>
+                  <p className="font-medium">{typeLabel(selectedEntry.type)}</p>
                 </div>
               </div>
 
+              {/* Assignees */}
               {selectedEntry.assignees.length > 0 && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">มอบหมายให้</p>
-                  <div className="flex flex-wrap gap-1">
+                  <p className="text-xs text-muted-foreground mb-2">มอบหมายให้</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {selectedEntry.assignees.map((a) => (
                       <Badge key={a.id} variant="secondary">
                         {a.name}
@@ -536,26 +733,29 @@ export function PMSchedulesClient() {
                 </div>
               )}
 
-              <Button
-                className="w-full"
-                onClick={() => handleTriggerNow(selectedEntry.scheduleId)}
-                disabled={triggerMut.isPending}
-              >
-                {triggerMut.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Zap className="h-4 w-4 mr-2" />
-                )}
-                เรียกใช้ตอนนี้
-              </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <Link
-                  href={`/pm-schedules/${selectedEntry.scheduleId}/edit`}
-                  onClick={() => setSheetOpen(false)}
+              {/* Action buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => handleTriggerNow(selectedEntry.scheduleId)}
+                  disabled={triggerMut.isPending}
                 >
-                  แก้ไขแผน
-                </Link>
-              </Button>
+                  {triggerMut.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  เรียกใช้ทันที
+                </Button>
+                <Button variant="outline" className="flex-1" asChild>
+                  <Link
+                    href={`/pm-schedules/${selectedEntry.scheduleId}/edit`}
+                    onClick={() => setSheetOpen(false)}
+                  >
+                    แก้ไขแผน
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
         </SheetContent>
@@ -572,8 +772,50 @@ interface PMCalendarGridProps {
   onEntryClick: (entry: PMCalendarEntry) => void
 }
 
+function PMEntryTooltipContent({ entry }: { entry: PMCalendarEntry }) {
+  return (
+    <div className="max-w-[280px]">
+      <div className="font-semibold text-white mb-2 text-sm leading-snug">{entry.title}</div>
+      <div className="space-y-1.5 text-xs text-gray-300">
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 w-16 flex-shrink-0">สินทรัพย์</span>
+          <span className="text-white truncate">{entry.assetName || 'ไม่ระบุ'}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 w-16 flex-shrink-0">ประเภท</span>
+          <span className="text-white">
+            {entry.type === 'CALENDAR'
+              ? 'ตามปฏิทิน'
+              : entry.type === 'METER'
+                ? 'ตามมาตรวัด'
+                : 'ตามสภาพ'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 w-16 flex-shrink-0">สถานะ</span>
+          <span className={entry.isOverdue ? 'text-red-400 font-medium' : 'text-green-400'}>
+            {entry.isOverdue ? 'เกินกำหนด' : 'ตามกำหนด'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 w-16 flex-shrink-0">เวลาประมาณ</span>
+          <span className="text-white">{entry.estimatedHours || 0} ชม.</span>
+        </div>
+        {entry.assignees.length > 0 && (
+          <div className="flex items-start gap-2">
+            <span className="text-gray-500 w-16 flex-shrink-0 pt-0.5">มอบหมาย</span>
+            <span className="text-white">{entry.assignees.map((a) => a.name).join(', ')}</span>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 pt-2 border-t border-gray-800 text-[10px] text-gray-500">
+        คลิกเพื่อดูรายละเอียดเต็ม
+      </div>
+    </div>
+  )
+}
+
 function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
-  // Build a 6-week grid (Sun–Sat) covering the month
   const monthStart = startOfMonth(month)
   const monthEnd = endOfMonth(month)
   const gridStart = startOfWeek(monthStart)
@@ -585,71 +827,106 @@ function PMCalendarGrid({ month, days, onEntryClick }: PMCalendarGridProps) {
   const WEEKDAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
   return (
-    <div className="rounded-xl border bg-card overflow-hidden">
-      {/* Day-of-week header */}
-      <div className="grid grid-cols-7 border-b">
-        {WEEKDAYS.map((wd) => (
-          <div key={wd} className="py-2 text-center text-xs font-medium text-muted-foreground">
-            {wd}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7">
-        {gridDays.map((day, idx) => {
-          const dateStr = format(day, 'yyyy-MM-dd')
-          const entries = entryByDate.get(dateStr) ?? []
-          const isOtherMonth = !isSameMonth(day, month)
-          const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
-
-          return (
-            <div
-              key={idx}
-              className={`min-h-24 border-r border-b last-col:border-r-0 p-1.5 ${
-                isOtherMonth ? 'bg-muted/20' : ''
-              } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
-            >
-              {/* Day number */}
-              <div
-                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 ${
-                  isToday
-                    ? 'bg-primary text-primary-foreground font-bold'
-                    : isOtherMonth
-                      ? 'text-muted-foreground'
-                      : 'font-medium'
-                }`}
-              >
-                {format(day, 'd')}
-              </div>
-
-              {/* PM event bars */}
-              <div className="space-y-0.5">
-                {entries.slice(0, 3).map((entry) => (
-                  <button
-                    key={entry.scheduleId}
-                    onClick={() => onEntryClick(entry)}
-                    className={`w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded border truncate ${
-                      entry.isOverdue
-                        ? 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200'
-                        : 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
-                    } transition-colors`}
-                    title={`${entry.title} — ${entry.assetName}`}
-                  >
-                    {entry.title}
-                  </button>
-                ))}
-                {entries.length > 3 && (
-                  <p className="text-[10px] text-muted-foreground pl-1">
-                    +{entries.length - 3} เพิ่มเติม
-                  </p>
-                )}
-              </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {/* Day-of-week header */}
+        <div className="grid grid-cols-7 border-b">
+          {WEEKDAYS.map((wd) => (
+            <div key={wd} className="py-2 text-center text-xs font-medium text-muted-foreground">
+              {wd}
             </div>
-          )
-        })}
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7">
+          {gridDays.map((day, idx) => {
+            const dateStr = format(day, 'yyyy-MM-dd')
+            const entries = entryByDate.get(dateStr) ?? []
+            const visible = entries.slice(0, 3)
+            const remaining = entries.length - visible.length
+            const isOtherMonth = !isSameMonth(day, month)
+            const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
+
+            return (
+              <div
+                key={idx}
+                className={`min-h-24 border-r border-b p-1.5 ${
+                  isOtherMonth ? 'bg-muted/20' : ''
+                } ${idx % 7 === 6 ? 'border-r-0' : ''}`}
+              >
+                {/* Day number */}
+                <div
+                  className={`w-6 h-6 flex items-center justify-center rounded-full text-xs mb-1 ${
+                    isToday
+                      ? 'bg-primary text-primary-foreground font-bold'
+                      : isOtherMonth
+                        ? 'text-muted-foreground'
+                        : 'font-medium'
+                  }`}
+                >
+                  {format(day, 'd')}
+                </div>
+
+                {/* PM event bars */}
+                <div className="space-y-0.5">
+                  {visible.map((entry) => (
+                    <Tooltip key={entry.scheduleId}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => onEntryClick(entry)}
+                          className={`w-full text-left text-[10px] leading-tight px-1.5 py-0.5 rounded truncate transition-colors ${eventBarClass(entry)}`}
+                        >
+                          {entry.title}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={6}
+                        className="bg-gray-950 text-white border border-gray-800 px-4 py-3 shadow-xl rounded-lg"
+                      >
+                        <PMEntryTooltipContent entry={entry} />
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+
+                  {remaining > 0 && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-[10px] text-muted-foreground hover:text-primary pl-1 w-full text-left transition-colors">
+                          +{remaining} เพิ่มเติม
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-60 p-2" side="bottom" align="start">
+                        <p className="text-xs font-medium mb-2 text-muted-foreground px-1">
+                          รายการทั้งหมดวันที่ {format(day, 'd MMM')}
+                        </p>
+                        <div className="space-y-0.5">
+                          {entries.slice(3).map((entry) => (
+                            <button
+                              key={entry.scheduleId}
+                              className="w-full text-left p-2 hover:bg-muted rounded text-sm transition-colors"
+                              onClick={() => onEntryClick(entry)}
+                            >
+                              <span className="block font-medium text-xs truncate">
+                                {entry.title}
+                              </span>
+                              <span className="block text-[10px] text-muted-foreground truncate">
+                                {entry.assetName}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
