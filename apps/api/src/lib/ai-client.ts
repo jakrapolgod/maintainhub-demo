@@ -1,18 +1,8 @@
-/**
- * OpenRouter AI client for the MaintainHub API.
- *
- * Uses the OpenAI-compatible API exposed by openrouter.ai so any model
- * available there can be swapped in via OPENROUTER_MODEL without code changes.
- *
- * `createAiAdapter` wraps the raw OpenAI client and satisfies the
- * `AnthropicClient` interface consumed by the use cases, keeping those files
- * unchanged despite the underlying provider swap.
- */
 import OpenAI from 'openai'
 import type {
   AnthropicClient,
-  AnthropicMessage,
-  AnthropicMessagesCreate,
+  AICompletionParams,
+  AIMessage,
 } from '../application/work-orders/ai/ai.types.js'
 
 // ── Client factory ────────────────────────────────────────────────────────────
@@ -34,28 +24,35 @@ export function createOpenRouterClient(opts: {
 
 // ── Adapter ───────────────────────────────────────────────────────────────────
 
-/**
- * Wraps a raw OpenAI / OpenRouter client so it satisfies the `AnthropicClient`
- * interface used by all AI use cases.  Translates:
- *   - Anthropic `{ system, messages }` → OpenAI `{ messages: [{role:'system'}, ...] }`
- *   - OpenAI   `{ choices[0].message.content, usage.prompt_tokens }` → Anthropic response shape
- */
 export function createAiAdapter(client: OpenAI): AnthropicClient {
   return {
-    messages: {
-      async create(params: AnthropicMessagesCreate): Promise<AnthropicMessage> {
-        const resp = await client.chat.completions.create({
-          model: params.model,
-          max_tokens: params.max_tokens,
-          messages: [{ role: 'system', content: params.system }, ...params.messages],
-        })
-        return {
-          content: [{ type: 'text', text: resp.choices[0]?.message?.content ?? '' }],
-          usage: {
-            input_tokens: resp.usage?.prompt_tokens ?? 0,
-            output_tokens: resp.usage?.completion_tokens ?? 0,
-          },
-        }
+    chat: {
+      completions: {
+        async create(params: AICompletionParams): Promise<AIMessage> {
+          const resp = await client.chat.completions.create({
+            model: params.model,
+            max_tokens: params.max_tokens ?? null,
+            messages: params.messages,
+          })
+          const result: AIMessage = {
+            choices: [
+              {
+                message: {
+                  role: resp.choices[0]?.message?.role ?? 'assistant',
+                  content: resp.choices[0]?.message?.content ?? '',
+                },
+              },
+            ],
+          }
+          if (resp.usage) {
+            result.usage = {
+              prompt_tokens: resp.usage.prompt_tokens,
+              completion_tokens: resp.usage.completion_tokens,
+              total_tokens: resp.usage.total_tokens,
+            }
+          }
+          return result
+        },
       },
     },
   }
